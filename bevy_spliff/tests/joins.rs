@@ -337,7 +337,7 @@ fn joined_first_with_despawned_target_should_skip() {
 }
 
 #[test]
-fn joined_first_should_yield_empty() {
+fn joined_first_should_return_empty() {
     // Arrange
     let mut world = World::new();
 
