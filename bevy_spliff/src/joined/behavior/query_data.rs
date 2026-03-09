@@ -47,41 +47,31 @@ where
 
             let res = fetch
                 .iter_joined(entity)?
-                .map(|(target, cell)| {
+                .filter_map(|(target, cell)| {
                     let location = cell.location();
-                    let tables = fetch.world.storages().tables.get(location.table_id)?;
                     let archetype = fetch.world.archetypes().get(location.archetype_id)?;
+                    let table = fetch.world.storages().tables.get(location.table_id)?;
 
-                    Some(
-                        Data::matches_component_set(&state.target_state, &|id| {
-                            archetype.contains(id)
-                        })
-                        .then(|| {
-                            Data::set_archetype(
-                                &mut data_fetch,
-                                &state.target_state,
-                                archetype,
-                                tables,
-                            );
-
-                            Data::fetch(
-                                &state.target_state,
-                                &mut data_fetch,
-                                target,
-                                location.table_row,
-                            )
-                        })
-                        .flatten(),
-                    )
+                    if Data::matches_component_set(&state.target_state, &|id| {
+                        archetype.contains(id)
+                    }) {
+                        Data::set_archetype(&mut data_fetch, &state.target_state, archetype, table);
+                        Data::fetch(
+                            &state.target_state,
+                            &mut data_fetch,
+                            target,
+                            location.table_row,
+                        )
+                    } else {
+                        None
+                    }
                 })
-                .collect::<Option<Vec<_>>>()?
-                .into_iter()
-                .flatten()
                 .collect();
 
             Some(Ref::Mapper::map_results(res))
         }
     }
+
     #[inline(always)]
     fn iter_access(state: &Self::State) -> impl Iterator<Item = EcsAccessType<'_>> {
         state.iter_access()

@@ -33,7 +33,9 @@ impl Weapon {
             .and_then(|weapon| world.get_mut::<Weapons>(weapon.0))
             .unwrap();
 
-        weapons.0.push(ctx.entity);
+        if !weapons.0.contains(&ctx.entity) {
+            weapons.0.push(ctx.entity);
+        }
     }
 }
 
@@ -54,7 +56,9 @@ impl Armor {
             .and_then(|armor| world.get_mut::<Armors>(armor.0))
             .unwrap();
 
-        weapons.0.push(ctx.entity);
+        if !weapons.0.contains(&ctx.entity) {
+            weapons.0.push(ctx.entity);
+        }
     }
 }
 
@@ -119,7 +123,7 @@ fn joined_deeply_nested_filtered_should_yield_all() {
 
 /* take care of this later
 #[test]
-fn joined_single_empty_should_() {
+fn joined_first_empty_should_() {
     // Arrange
     let mut world = World::new();
     let valid = world.spawn(Name::new("Valid".into())).id();
@@ -213,9 +217,29 @@ fn joined_should_yield_empty() {
 }
 
 #[test]
-fn joined_single_mapper_should_return_option() {
+fn joined_resilience_to_despawned_targets() {
     // Arrange
     let mut world = World::new();
+
+    let player = world.spawn(Character).id();
+    let sword = world.spawn((Weapon(player), Legendary)).id();
+    let mut query = world.query_filtered::<J<Weapons, Entity>, With<Character>>();
+
+    // Act
+    let init_res = query.single(&world).unwrap();
+    world.despawn(sword);
+    let res = query.single(&world).unwrap();
+
+    // Assert
+    assert!(init_res.contains(&sword));
+    assert!(!res.contains(&sword));
+}
+
+#[test]
+fn joined_first_mapper_should_return_option() {
+    // Arrange
+    let mut world = World::new();
+
     let player = world.spawn((Character, Name::new("Hero"))).id();
     world.spawn(Weapon(player));
 
@@ -228,7 +252,7 @@ fn joined_single_mapper_should_return_option() {
 }
 
 #[test]
-fn joined_single_should_filter() {
+fn joined_first_should_filter() {
     // Arrange
     let mut world = World::new();
 
@@ -249,7 +273,7 @@ fn joined_single_should_filter() {
 }
 
 #[test]
-fn joined_single_component_should_filter() {
+fn joined_first_component_should_filter() {
     // Assert
     let mut world = World::new();
 
@@ -272,7 +296,7 @@ fn joined_single_component_should_filter() {
 }
 
 #[test]
-fn joined_single_filtered_should_filter() {
+fn joined_first_filtered_should_filter() {
     // Arrange
     let mut world = World::new();
 
@@ -295,7 +319,7 @@ fn joined_single_filtered_should_filter() {
 }
 
 #[test]
-fn joined_single_with_despawned_target_should_skip() {
+fn joined_first_with_despawned_target_should_skip() {
     // Arrange
     let mut world = World::new();
     let target = world.spawn(Name::new("Ghost")).id();
@@ -313,7 +337,7 @@ fn joined_single_with_despawned_target_should_skip() {
 }
 
 #[test]
-fn joined_single_should_yield_empty() {
+fn joined_first_should_yield_empty() {
     // Arrange
     let mut world = World::new();
 
@@ -331,7 +355,7 @@ fn joined_single_should_yield_empty() {
 }
 
 #[test]
-fn joined_single_deeply_nested_filtered_should_return() {
+fn joined_first_deeply_nested_filtered_should_return() {
     // Arrange
     let mut world = World::new();
 
@@ -357,6 +381,24 @@ fn joined_single_deeply_nested_filtered_should_return() {
     assert_eq!(player_name.as_str(), PLAYER_NAME);
     assert_eq!(armor_name.as_str(), "Armor");
     assert_eq!(weapon_name.as_str(), "Magic Sword");
+}
+
+#[test]
+fn joined_first_should_skip_ghost_and_find_valid() {
+    // Arrange
+    let mut world = World::new();
+
+    let ghost = world.spawn(Name::new("Ghost")).id();
+    let valid = world.spawn(Name::new("Valid")).id();
+
+    world.spawn(Weapons(vec![ghost, valid]));
+    world.despawn(ghost);
+
+    // Act
+    let res = world.query::<JF<Weapons, &Name>>().single(&world).unwrap();
+
+    // Assert
+    assert_eq!(res.as_str(), "Valid");
 }
 
 #[test]
@@ -418,4 +460,27 @@ fn join_condition_should_detect_added_targets() {
     // Assert
     assert_eq!(res.len(), 1);
     assert_eq!(res[0], e2);
+}
+
+#[test]
+fn join_condition_should_be_true_if_any_target_is_valid() {
+    // Arrange
+    let mut world = World::new();
+    let player = world.spawn((Character, Name::new(PLAYER_NAME))).id();
+
+    let ghost = world.spawn(Name::new("Ghost")).id();
+    let valid = world.spawn(Legendary).id();
+
+    world.get_mut::<Weapons>(player).unwrap().0 = vec![ghost, valid];
+    world.despawn(ghost);
+
+    // Act
+    let res: Vec<Entity> = world
+        .query_filtered::<Entity, (With<Character>, JC<Weapons, With<Legendary>>)>()
+        .iter(&world)
+        .collect();
+
+    // Assert
+    assert_eq!(res.len(), 1);
+    assert_eq!(res[0], player);
 }

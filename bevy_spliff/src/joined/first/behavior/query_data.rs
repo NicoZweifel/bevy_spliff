@@ -40,26 +40,40 @@ where
 
             fetch
                 .iter_joined(entity)?
-                .try_fold(ControlFlow::Continue(()), |_, (target, target_cell)| {
-                    let location = target_cell.location();
-                    let archetype = fetch.world.archetypes().get(location.archetype_id)?;
-                    let table = fetch.world.storages().tables.get(location.table_id)?;
+                .try_fold(
+                    ControlFlow::Continue(()),
+                    |mut flow, (target, target_cell)| {
+                        let location = target_cell.location();
+                        let (Some(archetype), Some(table)) = (
+                            fetch.world.archetypes().get(location.archetype_id),
+                            fetch.world.storages().tables.get(location.table_id),
+                        ) else {
+                            return Some(flow);
+                        };
 
-                    if Data::matches_component_set(&state.target_state, &|id| {
-                        archetype.contains(id)
-                    }) {
-                        Data::set_archetype(&mut data_fetch, &state.target_state, archetype, table);
-                        Data::fetch(
-                            &state.target_state,
-                            &mut data_fetch,
-                            target,
-                            location.table_row,
-                        )
-                        .map(ControlFlow::Break)
-                    } else {
-                        Some(ControlFlow::Continue(()))
-                    }
-                })?
+                        if Data::matches_component_set(&state.target_state, &|id| {
+                            archetype.contains(id)
+                        }) {
+                            Data::set_archetype(
+                                &mut data_fetch,
+                                &state.target_state,
+                                archetype,
+                                table,
+                            );
+
+                            if let Some(item) = Data::fetch(
+                                &state.target_state,
+                                &mut data_fetch,
+                                target,
+                                location.table_row,
+                            ) {
+                                flow = ControlFlow::Break(item);
+                            }
+                        }
+
+                        Some(flow)
+                    },
+                )?
                 .break_value()
         }
     }
