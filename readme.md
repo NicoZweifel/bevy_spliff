@@ -21,7 +21,7 @@ currently this would look sth like this:
 ```rust
 fn manual_system(
     q_characters: Query<(&Name, &Weapons), With<Character>>,
-    q_weapons: Query<(&Name, &Legendary)>,
+    q_weapons: Query<&Name, With<Legendary>>,
 ) {
     for (name, weapons) in &q_characters {
         let weapon_names: Vec<&str> = weapons.0.iter()
