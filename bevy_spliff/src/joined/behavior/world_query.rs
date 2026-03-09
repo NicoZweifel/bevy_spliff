@@ -40,6 +40,7 @@ where
         _: &'w Table,
     ) {
     }
+    
     unsafe fn set_table<'w>(_: &mut Self::Fetch<'w>, _: &'_ Self::State, _: &'w Table) {}
 
     fn update_component_access(state: &Self::State, access: &mut FilteredAccess) {
