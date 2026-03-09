@@ -1,14 +1,14 @@
 [package]
 name = "bevy_spliff"
 description = "A crate for doing joins in bevy."
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/NicoZweifel/bevy_spliff"
 
 [dependencies]
 bevy_ecs = "0.18.1"
-bevy_spliff_derive = { version = "0.1.1", path = "../bevy_spliff_derive", optional = true }
+bevy_spliff_derive = { version = "0.1.2", path = "../bevy_spliff_derive", optional = true }
 
 [features]
 default = ["derive", "type-aliases"]

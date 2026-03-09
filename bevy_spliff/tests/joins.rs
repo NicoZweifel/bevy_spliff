@@ -378,6 +378,26 @@ fn join_condition_target_should_fail_condition() {
 }
 
 #[test]
+fn join_condition_should_continue_searching() {
+    // Arrange
+    let mut world = World::new();
+    let player = world.spawn((Character, Name::new(PLAYER_NAME))).id();
+
+    world.spawn(Weapon(player));
+    world.spawn((Weapon(player), Legendary));
+
+    // Act
+    let res: Vec<Entity> = world
+        .query_filtered::<Entity, (With<Character>, JC<Weapons, With<Legendary>>)>()
+        .iter(&world)
+        .collect();
+
+    // Assert
+    assert_eq!(res.len(), 1);
+    assert_eq!(res[0], player);
+}
+
+#[test]
 fn join_condition_should_detect_added_targets() {
     // Arrange
     let mut world = World::new();

@@ -189,7 +189,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_spliff"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "bevy_ecs",
  "bevy_spliff_derive",
@@ -197,7 +197,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_spliff_derive"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "quote",
  "syn",

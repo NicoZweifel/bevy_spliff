@@ -46,17 +46,17 @@ where
                                     archetype,
                                     table,
                                 );
-
-                                Filter::filter_fetch(
+                                if Filter::filter_fetch(
                                     &state.target_state,
                                     &mut filter_fetch,
                                     target,
                                     location.table_row,
-                                )
-                                .then_some(ControlFlow::Break(()))
-                            } else {
-                                Some(ControlFlow::Continue(()))
+                                ) {
+                                    return Some(ControlFlow::Break(()));
+                                }
                             }
+
+                            Some(ControlFlow::Continue(()))
                         })
                         .is_some_and(|flow| flow.is_break())
                 })
