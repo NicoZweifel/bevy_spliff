@@ -136,8 +136,8 @@ fn deeply_nested_joined_first_system(
 }
 ```
 
-For complex systems, you can use J, JF, and JC inside structs that derive QueryData or QueryFilter.
-This allows you to provide descriptive names for your joined data:
+For complex systems with deeply nested queries, you can use `J`, `JF`, and `JC` inside structs that derive QueryData or QueryFilter. 
+This might resolve warnings/readability issues and allows you to provide descriptive names for your joined data:
 
 ```rust
 #[derive(QueryData)]
