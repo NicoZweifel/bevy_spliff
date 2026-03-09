@@ -12,23 +12,23 @@ struct Character;
 struct Legendary;
 
 #[derive(Component, Joinable, Default)]
-#[relationship_target(relationship = Armor)]
+#[relationship_target(relationship = ArmorOf)]
 struct Armors(Vec<Entity>);
 
 #[derive(Component, Joinable, Default)]
-#[relationship_target(relationship = Weapon)]
+#[relationship_target(relationship = WeaponOf)]
 struct Weapons(Vec<Entity>);
 
 #[derive(Component, Joinable, Clone)]
 #[component(on_add = Self::on_add)]
 #[relationship(relationship_target = Weapons)]
 #[require(Name::new("Weapon"))]
-struct Weapon(Entity);
+struct WeaponOf(Entity);
 
-impl Weapon {
+impl WeaponOf {
     fn on_add(mut world: DeferredWorld, ctx: HookContext) {
         let mut weapons = world
-            .get::<Weapon>(ctx.entity)
+            .get::<WeaponOf>(ctx.entity)
             .cloned()
             .and_then(|weapon| world.get_mut::<Weapons>(weapon.0))
             .unwrap();
@@ -39,19 +39,19 @@ impl Weapon {
     }
 }
 
-/// For the purpose of testing deeply nested queries `Weapons` can be related to `Armor` parts as well.
+/// For the purpose of testing deeply nested queries `Weapons` can be related to `ArmorOf` parts as well.
 ///
 /// E.g. a weapon in a pocket.
 #[derive(Component, Joinable, Clone)]
 #[component(on_add = Self::on_add)]
 #[relationship(relationship_target = Armors)]
 #[require(Name::new("Armor"), Weapons)]
-struct Armor(Entity);
+struct ArmorOf(Entity);
 
-impl Armor {
+impl ArmorOf {
     fn on_add(mut world: DeferredWorld, ctx: HookContext) {
         let mut weapons = world
-            .get::<Armor>(ctx.entity)
+            .get::<ArmorOf>(ctx.entity)
             .cloned()
             .and_then(|armor| world.get_mut::<Armors>(armor.0))
             .unwrap();
@@ -67,10 +67,10 @@ fn joined_one_to_many_should_yield_all() {
     // Arrange
     let mut world = World::new();
     let hero_id = world.spawn(Character).id();
-    world.spawn((ChildOf(hero_id), Weapon(hero_id)));
-    world.spawn((ChildOf(hero_id), Weapon(hero_id), Name::new("Knife")));
-    world.spawn((ChildOf(hero_id), Armor(hero_id)));
-    world.spawn((ChildOf(hero_id), Armor(hero_id), Name::new("Helmet")));
+    world.spawn((ChildOf(hero_id), WeaponOf(hero_id)));
+    world.spawn((ChildOf(hero_id), WeaponOf(hero_id), Name::new("Knife")));
+    world.spawn((ChildOf(hero_id), ArmorOf(hero_id)));
+    world.spawn((ChildOf(hero_id), ArmorOf(hero_id), Name::new("Helmet")));
 
     // Act
     let results: Vec<_> = world
@@ -96,9 +96,9 @@ fn joined_deeply_nested_filtered_should_yield_all() {
     let mut world = World::new();
 
     let e1 = world.spawn(Character).id();
-    let e2 = world.spawn(Armor(e1)).id();
-    world.spawn((Weapon(e2), Legendary, Name::new("Magic Sword")));
-    world.spawn((Weapon(e2), Legendary, Name::new("Magic Shield")));
+    let e2 = world.spawn(ArmorOf(e1)).id();
+    world.spawn((WeaponOf(e2), Legendary, Name::new("Magic Sword")));
+    world.spawn((WeaponOf(e2), Legendary, Name::new("Magic Shield")));
 
     // Act
     let res: Vec<_> = world
@@ -222,7 +222,7 @@ fn joined_resilience_to_despawned_targets() {
     let mut world = World::new();
 
     let player = world.spawn(Character).id();
-    let sword = world.spawn((Weapon(player), Legendary)).id();
+    let sword = world.spawn((WeaponOf(player), Legendary)).id();
     let mut query = world.query_filtered::<J<Weapons, Entity>, With<Character>>();
 
     // Act
@@ -241,10 +241,10 @@ fn joined_first_mapper_should_return_option() {
     let mut world = World::new();
 
     let player = world.spawn((Character, Name::new("Hero"))).id();
-    world.spawn(Weapon(player));
+    world.spawn(WeaponOf(player));
 
     // Act
-    let res = world.query::<J<Weapon, &Name>>().single(&world);
+    let res = world.query::<J<WeaponOf, &Name>>().single(&world);
 
     // Assert
     assert!(res.is_ok());
@@ -257,7 +257,7 @@ fn joined_first_should_filter() {
     let mut world = World::new();
 
     let e = world.spawn(Character).id();
-    world.spawn((Weapon(e), ChildOf(e)));
+    world.spawn((WeaponOf(e), ChildOf(e)));
     world.spawn((Character, Name::new(ENEMY_NAME)));
 
     // Act
@@ -278,10 +278,10 @@ fn joined_first_component_should_filter() {
     let mut world = World::new();
 
     let e1 = world.spawn(Character).id();
-    world.spawn((Weapon(e1), ChildOf(e1)));
+    world.spawn((WeaponOf(e1), ChildOf(e1)));
 
     let e2 = world.spawn((Character, Name::new(ENEMY_NAME))).id();
-    world.spawn((Weapon(e2), ChildOf(e2), Legendary));
+    world.spawn((WeaponOf(e2), ChildOf(e2), Legendary));
 
     // Act
     let res: Vec<&Name> = world
@@ -301,10 +301,10 @@ fn joined_first_filtered_should_filter() {
     let mut world = World::new();
 
     let e1 = world.spawn(Character).id();
-    world.spawn((Weapon(e1), ChildOf(e1)));
+    world.spawn((WeaponOf(e1), ChildOf(e1)));
 
     let e2 = world.spawn((Character, Name::new(ENEMY_NAME))).id();
-    world.spawn((Weapon(e2), ChildOf(e2), Legendary));
+    world.spawn((WeaponOf(e2), ChildOf(e2), Legendary));
 
     // Act
     let res: Vec<&Name> = world
@@ -374,8 +374,8 @@ fn joined_first_deeply_nested_filtered_should_return() {
     let mut world = World::new();
 
     let e1 = world.spawn(Character).id();
-    let e2 = world.spawn(Armor(e1)).id();
-    world.spawn((Weapon(e2), Legendary, Name::new("Magic Sword")));
+    let e2 = world.spawn(ArmorOf(e1)).id();
+    world.spawn((WeaponOf(e2), Legendary, Name::new("Magic Sword")));
 
     // Act
     let res: Vec<_> = world
@@ -439,8 +439,8 @@ fn join_condition_should_continue_searching() {
     let mut world = World::new();
     let player = world.spawn((Character, Name::new(PLAYER_NAME))).id();
 
-    world.spawn(Weapon(player));
-    world.spawn((Weapon(player), Legendary));
+    world.spawn(WeaponOf(player));
+    world.spawn((WeaponOf(player), Legendary));
 
     // Act
     let res: Vec<Entity> = world
@@ -459,15 +459,15 @@ fn join_condition_should_detect_added_targets() {
     let mut world = World::new();
 
     let e1 = world.spawn(Character).id();
-    world.spawn((Weapon(e1), ChildOf(e1)));
+    world.spawn((WeaponOf(e1), ChildOf(e1)));
     world.clear_trackers();
 
     let e2 = world.spawn(Character).id();
-    world.spawn((Weapon(e2), ChildOf(e2)));
+    world.spawn((WeaponOf(e2), ChildOf(e2)));
 
     // Act
     let res: Vec<Entity> = world
-        .query_filtered::<Entity, JC<Weapons, Added<Weapon>>>()
+        .query_filtered::<Entity, JC<Weapons, Added<WeaponOf>>>()
         .iter(&world)
         .collect();
 

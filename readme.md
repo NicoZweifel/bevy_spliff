@@ -18,11 +18,13 @@ cargo add bevy_spliff
 And the `Joinable` derive macro:
 
 ```rust
-#[derive(Component, Joinable)]
-pub struct Weapons(pub Vec<Entity>);
+#[derive(Component, Joinable, Default)]
+#[relationship_target(relationship = WeaponOf)]
+struct Weapons(Vec<Entity>);
 
 #[derive(Component, Joinable)]
-pub struct Target(pub Entity);
+#[relationship(relationship_target = Weapons)]
+struct WeaponOf(Entity);
 ```
 
 ### Usage
