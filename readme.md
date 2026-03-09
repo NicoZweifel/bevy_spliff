@@ -116,7 +116,8 @@ fn deeply_nested_joined_first_system(
 }
 ```
 
-When managing complex types you can declare structs and derive `QueryData`, just as you would with complex queries in general:
+For complex systems, you can use J, JF, and JC inside structs that derive QueryData or QueryFilter.
+This allows you to provide descriptive names for your joined data:
 
 ```rust
 #[derive(QueryData)]
@@ -168,11 +169,14 @@ Because Bevy queries do not duplicate the "Root" entity for multiple matches (un
 
 | `bevy_spliff`              | SQL Equivalent                                            | Behavior | Empty/Broken List Behavior |
 |:---------------------------|:----------------------------------------------------------| :--- | :--- |
-| **`J<Ref, Data>`**         | `LEFT JOIN target WHERE target.Data IS NOT NULL`          | Fetches targets that have `D`. | Keeps the root entity, returns an empty `Vec`. |
+| **`J<Ref, Data>`** | `LEFT JOIN target WHERE target.Data IS NOT NULL`          | Fetches targets that have `D`. | Keeps the root entity, returns an empty `Vec`. |
 | **`J<Ref, Option<Data>>`** | `LEFT JOIN target`                                        | Fetches all targets, wrapping data in `Option`. | Keeps the root entity, returns an empty `Vec`. |
-| **`JF<Ref, Data>`**        | `INNER JOIN target WHERE target.Data IS NOT NULL LIMIT 1` | Fetches the first target that has `D`. | Filters out the root entity from the query. |
-| **`JC<Ref, Filter>`**      | `WHERE EXISTS (SELECT 1 FROM target WHERE F)`             | Strict filter condition on the entire row without fetching data. | Filters out the root entity from the query. |
-| **`J` + `JC`**             | `INNER JOIN target` (1-to-Many)                           | Fetches all matches as a `Vec`, strictly requires at least one target to pass `JC`. | Filters out the root entity from the query. |
+| **`JF<Ref, Data>`** | `INNER JOIN target WHERE target.Data IS NOT NULL` | Fetches the first target that has `D`. | Filters out the root entity from the query. |
+| **`JC<Ref, Filter>`** | `WHERE EXISTS (SELECT 1 FROM target WHERE F)`             | Strict filter condition on the entire row without fetching data. | Filters out the root entity from the query. |
+| **`J` + `JC`** | `INNER JOIN target` (1-to-Many)                           | Fetches all matches as a `Vec`, strictly requires at least one target to pass `JC`. | Filters out the root entity from the query. |
+
+> [!TIP]
+> For a standard Inner Join, **`JF`** is usually your best option. However, if you need a **1-to-Many Inner Join** (fetching all matching targets but skipping root entities that have zero matches), combine `J<Ref, Data>` in your query data with `JC<Ref, Filter>` in your query filter.
 
 ## Okay... so when to use what?
 
@@ -187,7 +191,7 @@ Choosing between `J`, `JF`, and `JC` comes down to **Optionality** (do they *nee
 * **I need one related item, and the system should SKIP entities that don't have it.**
   -> Use **`JF`** (Returns the item directly, acts as an Inner Join).
   *Example: A combat system. Players without an equipped weapon cannot attack and should be skipped by the system.*
-* **I don't need the related data, I just care IF they have it.** Use **`JC`** (Acts as a Query Filter).
+* **I don't need the data, I just care IF they have it.** Use **`JC`** (Acts as a Query Filter).
   *Example: A healing system or for usage with marker components, e.g. you only want to query players that have a Health Potion in their inventory, but you don't need to read the data yet.*
 
 ## Feature Flags
