@@ -24,12 +24,11 @@ fn manual_system(
     q_weapons: Query<&Name, With<Legendary>>,
 ) {
     for (name, weapons) in &q_characters {
-        let weapon_names: Vec<&str> = weapons.0.iter()
+        let weapon_names: Vec<&Name> = weapons.0.iter()
             .filter_map(|&e| q_weapons.get(e).ok())
-            .map(|(name, _)| name.0.as_str())
             .collect();
-        
-        println!("Character {} has legendary weapons: {:?}", name.0, weapon_names);
+
+        println!("Character {} has legendary weapons: {:?}", name, weapon_names);
     }
 }
 ```
@@ -37,13 +36,13 @@ fn manual_system(
 Using `bevy_spliff` this simplifies to:
 
 ```rust
-fn spliff_system(
+fn joined_system(
     q: Query<
         (&Name, Joined<Weapons, &Name>),
         (With<Character>, JoinCondition<Weapons, With<Legendary>>),
     >,
 ) {
-    for (name, weapon_names) in &query {
+    for (name, weapon_names) in &q {
         println!(
             "Character {} has legendary weapons: {:?}",
             name.0, weapon_names
@@ -55,13 +54,51 @@ fn spliff_system(
 You can use the `type-aliases` feature, which is enabled by default, if you prefer even shorter syntax:
 
 ```rust
-fn aliased_spliff_system(
+fn aliased_joined_system(
     q: Query<(&Name, J<Weapons, &Name>), (With<Character>, JC<Weapons, With<Legendary>>)>,
 ) {
-    for (name, weapon_names) in &query {
+    for (name, weapon_names) in &q {
         println!(
             "Character {} has legendary weapons: {:?}",
-            name.0, weapon_names
+            name, weapon_names
+        );
+    }
+}
+```
+
+This also works for deeply nested relational queries:
+
+```rust
+fn deeply_nested_joined_system(
+    q: Query<
+        (&Name, J<Armors, (&Name, J<Weapons, &Name>)>),
+        (With<Character>, JC<Armors, JC<Weapons, With<Legendary>>>),
+    >,
+) {
+    for (name, armors) in &q {
+        for (armor_name, weapon_names) in armors {
+            println!(
+                "Character {} with armor {:?} has legendary weapons: {:?}",
+                name, armor_name, weapon_names
+            );
+        }
+    }
+}
+```
+
+You can also use `JoinedFirst` or `JF` to inner join on the first match.
+
+```rust
+fn deeply_nested_joined_first_system(
+    q: Query<
+        (&Name, JF<Armors, (&Name, JF<Weapons, &Name>)>),
+        (With<Character>, JC<Armors, JC<Weapons, With<Legendary>>>),
+    >,
+) {
+    for (name, (armor_name, weapon_name)) in &q {
+        println!(
+            "Character {} with armor {:?} has legendary weapons: {:?}",
+            name, armor_name, weapon_name
         );
     }
 }
