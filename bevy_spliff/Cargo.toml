@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 bevy_ecs = "0.18.1"
-bevy_spliff_derive = { path = "../bevy_spliff_derive",optional = true }
+bevy_spliff_derive = { version = "0.1.0", path = "../bevy_spliff_derive", optional = true }
 
 [features]
 default = ["derive", "type-aliases"]

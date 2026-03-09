@@ -6,8 +6,6 @@ use bevy_ecs::{
 };
 use std::iter;
 
-
-
 pub trait JoinResultMapper: 'static + Send + Sync {
     type Item<'w, 's, D: QueryData>;
 

@@ -1,6 +1,8 @@
 use crate::prelude::*;
 use bevy_ecs::{
-    component::ComponentId, prelude::*, query::{WorldQuery,QueryData, FilteredAccess},
+    component::ComponentId,
+    prelude::*,
+    query::{FilteredAccess, QueryData, WorldQuery},
     world::unsafe_world_cell::UnsafeWorldCell,
 };
 use std::marker::PhantomData;
@@ -62,7 +64,7 @@ impl<Ref, Target: WorldQuery> JoinedState<Ref, Target> {
         }
     }
 
-   #[inline(always)]
+    #[inline(always)]
     pub fn update_access(&self, access: &mut FilteredAccess) {
         access.add_component_read(self.ref_id);
         let mut target_access = FilteredAccess::default();
