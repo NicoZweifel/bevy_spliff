@@ -15,6 +15,16 @@ Just add the dependency.
 cargo add bevy_spliff
 ```
 
+And the `Joinable` derive macro:
+
+```rust
+#[derive(Component, Joinable)]
+pub struct Weapons(pub Vec<Entity>);
+
+#[derive(Component, Joinable)]
+pub struct Target(pub Entity);
+```
+
 ### Usage
 
 Imagine you are writing a system that needs to fetch nested conditional data, 
@@ -47,7 +57,7 @@ fn joined_system(
     for (name, weapon_names) in &q {
         println!(
             "Character {} has legendary weapons: {:?}",
-            name.0, weapon_names
+            name, weapon_names
         );
     }
 }
@@ -106,7 +116,7 @@ fn deeply_nested_joined_first_system(
 }
 ```
 
-When managing very complex types you can declare structs and derive `QueryData`, just as you would with complex queries in general:
+When managing complex types you can declare structs and derive `QueryData`, just as you would with complex queries in general:
 
 ```rust
 #[derive(QueryData)]
@@ -121,11 +131,11 @@ pub struct CharacterWeaponFilter {
     _has_legendary: JC<Weapons, With<Legendary>>,
 }
 
-fn spliff_system(query: Query<CharacterWeaponQueryData, CharacterWeaponFilter>) {
+fn complex_joined_system(query: Query<CharacterWeaponQueryData, CharacterWeaponFilter>) {
     for character in &query {
         println!(
             "Character {} has legendary weapons: {:?}", 
-            character.name.0, 
+            character.name, 
             character.weapon_names
         );
     }
@@ -134,15 +144,15 @@ fn spliff_system(query: Query<CharacterWeaponQueryData, CharacterWeaponFilter>) 
 
 ## Overview
 
-| Feature              | Type Alias | Description | Example Usage |
-|----------------------| --- | --- | --- |
-| **Joined**           | `J<R, D>` | Fetches data from all valid targets. Returns `Vec` or `Option` based on the mapper. | `J<Weapons, &Name>` |
-| **Joined First**     | `JF<R, D>` | Traverses a relationship and returns only the first target that matches the query data. | `JF<Armors, &Name>` |
-| **Join Condition**   | `JC<R, F>` | A query filter that checks if any target of a relationship satisfies a specific condition. | `JC<Weapons, With<Legendary>>` |
-| **Derive Macro**     | `Joinable` | Automatically implements the `Joinable` trait for structs containing an `Entity` or `Vec<Entity>`. | `#[derive(Joinable)]` |
-| **Deep Nesting**     | N/A | Supports recursive joins (joining on a joined result) for complex hierarchy traversals. | `J<A, (Data, J<B, Data>)>` |
-| **Built-in Support** | N/A | Native support for standard Bevy hierarchy components like `Children` and `ChildOf`. | `J<Children, &Name>` |
-| **Change Detection** | N/A | Integrates with Bevy's change detection within the join filters. | `JC<R, Changed<T>>` |
+| Feature              | Type Alias        | Description | Example Usage |
+|----------------------|-------------------| --- | --- |
+| **Joined**           | `J<Ref, Data>`    | Fetches data from all valid targets. Returns `Vec` or `Option` based on the mapper. | `J<Weapons, &Name>` |
+| **Joined First**     | `JF<Ref, Data>`   | Traverses a relationship and returns only the first target that matches the query data. | `JF<Armors, &Name>` |
+| **Join Condition**   | `JC<Ref, Filter>` | A query filter that checks if any target of a relationship satisfies a specific condition. | `JC<Weapons, With<Legendary>>` |
+| **Derive Macro**     | `Joinable`        | Automatically implements the `Joinable` trait for structs containing an `Entity` or `Vec<Entity>`. | `#[derive(Joinable)]` |
+| **Deep Nesting**     | N/A               | Supports recursive joins (joining on a joined result) for complex hierarchy traversals. | `J<A, (Data, J<B, Data>)>` |
+| **Built-in Support** | N/A               | Native support for standard Bevy hierarchy components like `Children` and `ChildOf`. | `J<Children, &Name>` |
+| **Change Detection** | N/A               | Integrates with Bevy's change detection within the join filters. | `JC<R, Changed<T>>` |
 
 ### Key Definitions
 
@@ -150,14 +160,35 @@ fn spliff_system(query: Query<CharacterWeaponQueryData, CharacterWeaponFilter>) 
 * **`D` (Data)**: The `QueryData` you wish to retrieve from the target entity.
 * **`F` (Filter)**: A `QueryFilter` to validate the target entity without fetching data.
 
-## SQL Equivalents
+## SQL Analogs
 
-| `bevy_spliff` | SQL Equivalent | Behavior | Empty/Broken List Behavior |
-| :--- | :--- | :--- | :--- |
-| **`J<R, D>`** | `LEFT JOIN` | Fetches data if related targets exist. | Keeps the root entity, returns an empty `Vec`. |
-| **`JF<R, D>`** | `INNER JOIN ... LIMIT 1` | Fetches the first valid match. | Filters out the root entity from the query. |
-| **`JC<R, F>`** | `WHERE EXISTS (...)` | Filters based on related targets without fetching their data. | Filters out the root entity from the query. |
+If you are coming from a relational database background, here is how `bevy_spliff` types conceptually map to SQL operations. 
 
+Because Bevy queries do not duplicate the "Root" entity for multiple matches (unlike standard SQL joins), `bevy_spliff` uses a combination of Data and Filters to achieve relational results:
+
+| `bevy_spliff`              | SQL Equivalent                                            | Behavior | Empty/Broken List Behavior |
+|:---------------------------|:----------------------------------------------------------| :--- | :--- |
+| **`J<Ref, Data>`**         | `LEFT JOIN target WHERE target.Data IS NOT NULL`          | Fetches targets that have `D`. | Keeps the root entity, returns an empty `Vec`. |
+| **`J<Ref, Option<Data>>`** | `LEFT JOIN target`                                        | Fetches all targets, wrapping data in `Option`. | Keeps the root entity, returns an empty `Vec`. |
+| **`JF<Ref, Data>`**        | `INNER JOIN target WHERE target.Data IS NOT NULL LIMIT 1` | Fetches the first target that has `D`. | Filters out the root entity from the query. |
+| **`JC<Ref, Filter>`**      | `WHERE EXISTS (SELECT 1 FROM target WHERE F)`             | Strict filter condition on the entire row without fetching data. | Filters out the root entity from the query. |
+| **`J` + `JC`**             | `INNER JOIN target` (1-to-Many)                           | Fetches all matches as a `Vec`, strictly requires at least one target to pass `JC`. | Filters out the root entity from the query. |
+
+## Okay... so when to use what?
+
+Choosing between `J`, `JF`, and `JC` comes down to **Optionality** (do they *need* to have it?) and **Multiplicity** (do you need *all* of them, or just *one*?).
+
+* **I need to process all related items.**
+  -> Use **`J`** (Returns a `Vec`). 
+  *Example: Calculating the total weight of a player's inventory.*
+* **I need one related item, but it's okay if they don't have any.**
+  -> Use **`J`** (Returns an empty `Vec` or `Option` depending on the mapper).
+  *Example: Drawing a weapon icon on the UI. Unarmed players should still have their UI drawn, just with an empty weapon slot.*
+* **I need one related item, and the system should SKIP entities that don't have it.**
+  -> Use **`JF`** (Returns the item directly, acts as an Inner Join).
+  *Example: A combat system. Players without an equipped weapon cannot attack and should be skipped by the system.*
+* **I don't need the related data, I just care IF they have it.** Use **`JC`** (Acts as a Query Filter).
+  *Example: A healing system or for usage with marker components, e.g. you only want to query players that have a Health Potion in their inventory, but you don't need to read the data yet.*
 
 ## Feature Flags
 
