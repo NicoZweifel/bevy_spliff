@@ -1,0 +1,14 @@
+[package]
+name = "bevy_spliff"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy_ecs = "0.18.1"
+bevy_spliff_derive = { path = "../bevy_spliff_derive",optional = true }
+
+[features]
+default = ["derive", "type-aliases"]
+derive = ["dep:bevy_spliff_derive"]
+type-aliases = []
+

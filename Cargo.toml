@@ -1,0 +1,4 @@
+
+[workspace]
+members = ["bevy_spliff", "bevy_spliff_derive"]
+resolver = "3"

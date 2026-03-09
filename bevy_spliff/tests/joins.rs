@@ -1,0 +1,404 @@
+use bevy_ecs::{lifecycle::HookContext, prelude::*, world::DeferredWorld};
+use bevy_spliff::prelude::*;
+
+const PLAYER_NAME: &str = "Player";
+const ENEMY_NAME: &str = "Enemy";
+
+#[derive(Component)]
+#[require(Armors, Weapons, Name(PLAYER_NAME.into()))]
+struct Character;
+
+#[derive(Component, Debug, PartialEq, Clone)]
+struct Name(String);
+
+#[derive(Component)]
+struct Legendary;
+
+#[derive(Component, Joinable, Default)]
+#[relationship_target(relationship = Armor)]
+struct Armors(Vec<Entity>);
+
+#[derive(Component, Joinable, Default)]
+#[relationship_target(relationship = Weapon)]
+struct Weapons(Vec<Entity>);
+
+#[derive(Component, Joinable, Clone)]
+#[component(on_add = Self::on_add)]
+#[relationship(relationship_target = Weapons)]
+#[require(Name("Weapon".into()))]
+struct Weapon(Entity);
+
+impl Weapon {
+    fn on_add(mut world: DeferredWorld, ctx: HookContext) {
+        let mut weapons = world
+            .get::<Weapon>(ctx.entity)
+            .cloned()
+            .and_then(|weapon| world.get_mut::<Weapons>(weapon.0))
+            .unwrap();
+
+        weapons.0.push(ctx.entity);
+    }
+}
+
+/// For the purpose of testing deeply nested queries `Weapons` can be related to `Armor` parts as well.
+///
+/// E.g. a weapon in a pocket.
+#[derive(Component, Joinable, Clone)]
+#[component(on_add = Self::on_add)]
+#[relationship(relationship_target = Armors)]
+#[require(Name("Armor".into()), Weapons)]
+struct Armor(Entity);
+
+impl Armor {
+    fn on_add(mut world: DeferredWorld, ctx: HookContext) {
+        let mut weapons = world
+            .get::<Armor>(ctx.entity)
+            .cloned()
+            .and_then(|armor| world.get_mut::<Armors>(armor.0))
+            .unwrap();
+
+        weapons.0.push(ctx.entity);
+    }
+}
+
+#[test]
+fn joined_one_to_many_should_yield_all() {
+    // Arrange
+    let mut world = World::new();
+    let hero_id = world.spawn(Character).id();
+    world.spawn((ChildOf(hero_id), Weapon(hero_id)));
+    world.spawn((ChildOf(hero_id), Weapon(hero_id), Name("Knife".into())));
+    world.spawn((ChildOf(hero_id), Armor(hero_id)));
+    world.spawn((ChildOf(hero_id), Armor(hero_id), Name("Helmet".into())));
+
+    // Act
+    let results: Vec<_> = world
+        .query_filtered::<(&Name, J<Weapons, &Name>, J<Armors, &Name>), With<Character>>()
+        .iter(&world)
+        .collect();
+
+    // Assert
+    assert_eq!(results.len(), 1);
+    let (player_name, weapon_names, armor_names) = &results[0];
+    let weapon_names: Vec<&str> = weapon_names.iter().map(|n| n.0.as_str()).collect();
+    let armor_names: Vec<&str> = armor_names.iter().map(|n| n.0.as_str()).collect();
+    assert_eq!(player_name.0, PLAYER_NAME);
+    assert!(weapon_names.contains(&"Weapon"));
+    assert!(weapon_names.contains(&"Knife"));
+    assert!(armor_names.contains(&"Armor"));
+    assert!(armor_names.contains(&"Helmet"));
+}
+
+#[test]
+fn joined_deeply_nested_filtered_should_yield_all() {
+    // Arrange
+    let mut world = World::new();
+
+    let e1 = world.spawn(Character).id();
+    let e2 = world.spawn(Armor(e1)).id();
+    world.spawn((Weapon(e2), Legendary, Name("Magic Sword".into())));
+    world.spawn((Weapon(e2), Legendary, Name("Magic Shield".into())));
+
+    // Act
+    let res: Vec<_> = world
+        .query_filtered::<(&Name, J<Armors, (&Name, J<Weapons, &Name>)>), (
+            With<Character>,
+            JC<Armors, JC<Weapons, With<Legendary>>>,
+        )>()
+        .iter(&world)
+        .collect();
+
+    // Assert
+    let (player_name, armor_names) = &res[0];
+    let (armor_name, weapon_names) = &armor_names[0];
+    let weapon_names: Vec<&str> = weapon_names.iter().map(|n| n.0.as_str()).collect();
+
+    assert_eq!(res.len(), 1);
+    assert_eq!(player_name.0, PLAYER_NAME);
+    assert_eq!(armor_name.0, "Armor");
+    assert!(weapon_names.contains(&"Magic Sword"));
+    assert!(weapon_names.contains(&"Magic Shield"));
+}
+
+/* take care of this later
+#[test]
+fn joined_single_empty_should_() {
+    // Arrange
+    let mut world = World::new();
+    let valid = world.spawn(Name("Valid".into())).id();
+    // TODO handle this gracefully if possible?
+    let invalid = world.spawn_empty().id();
+
+    world.spawn(Weapons(vec![valid, invalid]));
+
+    // Act
+    let res: Vec<_> = world
+        .query::<JoinedFirst<Weapons, &Name>>()
+        .iter(&world)
+        .collect();
+
+    // Assert
+    assert_eq!(res.len(), 1);
+}
+ */
+
+#[test]
+fn joined_empty_should_skip_and_yield_valid() {
+    // Arrange
+    let mut world = World::new();
+    let valid = world.spawn(Name("Valid".into())).id();
+    let invalid = world.spawn_empty().id();
+
+    world.spawn(Weapons(vec![valid, invalid]));
+
+    // Act
+    let res: Vec<Vec<&Name>> = world.query::<J<Weapons, &Name>>().iter(&world).collect();
+
+    // Assert
+    assert_eq!(res[0].len(), 1);
+    assert_eq!(res[0][0].0, "Valid");
+}
+
+#[test]
+fn joined_with_despawned_target_should_skip() {
+    // Arrange
+    let mut world = World::new();
+
+    let e = world.spawn(Name("Ghost".into())).id();
+    world.spawn(Weapons(vec![e]));
+    world.despawn(e);
+
+    // Act
+    let res: Vec<Vec<&Name>> = world.query::<J<Weapons, &Name>>().iter(&world).collect();
+
+    // Assert
+    assert_eq!(res.len(), 1);
+    assert!(res[0].is_empty());
+}
+
+#[test]
+fn joined_children_should_yield_all() {
+    // Arrange
+    let mut world = World::new();
+
+    let parent = world.spawn(Name("Parent".into())).id();
+
+    world.spawn((Name("Child 1".into()), ChildOf(parent)));
+    world.spawn((Name("Child 2".into()), ChildOf(parent)));
+
+    // Act
+    let res: Vec<Vec<&Name>> = world
+        .query_filtered::<J<Children, &Name>, With<Children>>()
+        .iter(&world)
+        .collect();
+
+    // Assert
+    assert_eq!(res.len(), 1);
+    assert_eq!(res[0].len(), 2);
+    let joined_names: Vec<&str> = res[0].iter().map(|n| n.0.as_str()).collect();
+    assert!(joined_names.contains(&"Child 1"));
+    assert!(joined_names.contains(&"Child 2"));
+}
+
+#[test]
+fn joined_should_yield_empty() {
+    // Arrange
+    let mut world = World::new();
+
+    world.spawn(Weapons(vec![]));
+
+    // Act
+    let res: Vec<_> = world.query::<J<Weapons, &Name>>().iter(&world).collect();
+
+    // Assert
+    assert_eq!(res.len(), 1);
+    assert_eq!(res[0].len(), 0);
+}
+
+#[test]
+fn joined_single_mapper_should_return_option() {
+    // Arrange
+    let mut world = World::new();
+    let player = world.spawn((Character, Name("Hero".into()))).id();
+    world.spawn(Weapon(player));
+
+    // Act
+    let res = world.query::<J<Weapon, &Name>>().single(&world);
+
+    // Assert
+    assert!(res.is_ok());
+    assert_eq!(res.unwrap().unwrap().0, "Hero");
+}
+
+#[test]
+fn joined_single_should_filter() {
+    // Arrange
+    let mut world = World::new();
+
+    let e = world.spawn(Character).id();
+    world.spawn((Weapon(e), ChildOf(e)));
+    world.spawn((Character, Name(ENEMY_NAME.into())));
+
+    // Act
+    let res: Vec<&Name> = world
+        .query_filtered::<(&Name, JF<Weapons, &Name>), ()>()
+        .iter(&world)
+        .map(|x| x.0)
+        .collect();
+
+    // Assert
+    assert_eq!(res.len(), 1);
+    assert_eq!(res[0].0, PLAYER_NAME);
+}
+
+#[test]
+fn joined_single_component_should_filter() {
+    // Assert
+    let mut world = World::new();
+
+    let e1 = world.spawn(Character).id();
+    world.spawn((Weapon(e1), ChildOf(e1)));
+
+    let e2 = world.spawn((Character, Name(ENEMY_NAME.into()))).id();
+    world.spawn((Weapon(e2), ChildOf(e2), Legendary));
+
+    // Act
+    let res: Vec<&Name> = world
+        .query::<(&Name, JF<Weapons, &Legendary>)>()
+        .iter(&world)
+        .map(|x| x.0)
+        .collect();
+
+    // Assert
+    assert_eq!(res.len(), 1);
+    assert_eq!(res[0].0, ENEMY_NAME);
+}
+
+#[test]
+fn joined_single_filtered_should_filter() {
+    // Arrange
+    let mut world = World::new();
+
+    let e1 = world.spawn(Character).id();
+    world.spawn((Weapon(e1), ChildOf(e1)));
+
+    let e2 = world.spawn((Character, Name(ENEMY_NAME.into()))).id();
+    world.spawn((Weapon(e2), ChildOf(e2), Legendary));
+
+    // Act
+    let res: Vec<&Name> = world
+        .query_filtered::<(&Name, JF<Weapons, &Name>), JC<Weapons, With<Legendary>>>()
+        .iter(&world)
+        .map(|x| x.0)
+        .collect();
+
+    // Assert
+    assert_eq!(res.len(), 1);
+    assert_eq!(res[0].0, ENEMY_NAME);
+}
+
+#[test]
+fn joined_single_with_despawned_target_should_skip() {
+    // Arrange
+    let mut world = World::new();
+    let target = world.spawn(Name("Ghost".into())).id();
+    world.spawn(Weapons(vec![target]));
+    world.despawn(target);
+
+    // Act
+    let res: Vec<_> = world
+        .query::<(Entity, JF<Weapons, &Name>)>()
+        .iter(&world)
+        .collect();
+
+    // Assert
+    assert!(res.is_empty());
+}
+
+#[test]
+fn joined_single_should_yield_empty() {
+    // Arrange
+    let mut world = World::new();
+
+    let target = world.spawn(Armors(vec![])).id();
+    world.spawn(Weapons(vec![target]));
+
+    // Act
+    let res: Vec<_> = world
+        .query::<(Entity, JF<Weapons, JF<Armors, &Name>>)>()
+        .iter(&world)
+        .collect();
+
+    // Assert
+    assert!(res.is_empty());
+}
+
+#[test]
+fn joined_single_deeply_nested_filtered_should_return() {
+    // Arrange
+    let mut world = World::new();
+
+    let e1 = world.spawn(Character).id();
+    let e2 = world.spawn(Armor(e1)).id();
+    world.spawn((Weapon(e2), Legendary, Name("Magic Sword".into())));
+
+    // Act
+    let res: Vec<_> = world
+        .query_filtered::<(
+            &Name,
+            JF<Armors, (&Name, JF<Weapons, &Name>)>,
+        ), (
+            With<Character>,
+            JC<Armors, JC<Weapons, With<Legendary>>>,
+        )>()
+        .iter(&world)
+        .collect();
+
+    // Assert
+    let (player_name, (armor_name, weapon_name)) = res[0];
+    assert_eq!(res.len(), 1);
+    assert_eq!(player_name.0, PLAYER_NAME);
+    assert_eq!(armor_name.0, "Armor");
+    assert_eq!(weapon_name.0, "Magic Sword");
+}
+
+#[test]
+fn join_condition_target_should_fail_condition() {
+    // Arrange
+    let mut world = World::new();
+    let target = world.spawn(Name("Target".into())).id();
+    world.spawn(Weapons(vec![target]));
+    world.clear_trackers();
+
+    // Act
+    let res: Vec<_> = world
+        .query_filtered::<Entity, JC<Weapons, Changed<Name>>>()
+        .iter(&world)
+        .collect();
+
+    // Assert
+    assert!(res.is_empty());
+}
+
+#[test]
+fn join_condition_should_detect_added_targets() {
+    // Arrange
+    let mut world = World::new();
+
+    let e1 = world.spawn(Character).id();
+    world.spawn((Weapon(e1), ChildOf(e1)));
+    world.clear_trackers();
+
+    let e2 = world.spawn(Character).id();
+    world.spawn((Weapon(e2), ChildOf(e2)));
+
+    // Act
+    let res: Vec<Entity> = world
+        .query_filtered::<Entity, JC<Weapons, Added<Weapon>>>()
+        .iter(&world)
+        .collect();
+
+    // Assert
+    assert_eq!(res.len(), 1);
+    assert_eq!(res[0], e2);
+}
