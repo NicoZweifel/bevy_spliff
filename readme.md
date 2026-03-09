@@ -221,8 +221,10 @@ These are enabled by default.
 
 ## Notes / TODOs
 
-- Depends on `bevy_ecs` only.
 - Mutable access on `Joined` would be great, rn it's `ReadOnlyQueryData` for `Joined`.
+- Use [`NestedQuery`](https://github.com/bevyengine/bevy/pull/21557), which should also solve mutability for `Joined`.
+- Cleanup `WorldQuery`/`QueryData` implementations with e.g. generic `JoinQuery` implementations.
+- Depends on `bevy_ecs` only.
 - More test cases and organizing suites.
 - Make sure this doesn't do something terribly wrong.
 - If you cannot guarantee a stable order in your data but need to handle all potential matches, 
