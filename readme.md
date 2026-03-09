@@ -1,4 +1,4 @@
-# bevy_spliff
+# bevy_spliff 💨
 [![License](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](https://github.com/NicoZweifel/bevy_spliff?tab=readme-ov-file#licensecreditsinspirationsreferences)
 [![Crates.io](https://img.shields.io/crates/v/bevy_spliff.svg)](https://crates.io/crates/bevy_spliff)
 
@@ -196,7 +196,7 @@ Because Bevy queries do not duplicate the "Root" entity for multiple matches (un
 > [!TIP]
 > For a standard Inner Join, **`JF`** is usually your best option. However, if you need a **1-to-Many Inner Join** (fetching all matching targets but skipping root entities that have zero matches), combine `J<Ref, Data>` in your query data with `JC<Ref, Filter>` in your query filter.
 
-## Okay... so when to use what?
+## Okay... so when to use what then?
 
 Choosing between `J`, `JF`, and `JC` comes down to **Optionality** (do they *need* to have it?) and **Multiplicity** (do you need *all* of them, or just *one*?).
 
