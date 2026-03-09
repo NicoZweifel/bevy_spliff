@@ -47,7 +47,7 @@ fn manual_system(
 }
 ```
 
-Using `bevy_spliff` this simplifies to:
+this simplifies to:
 
 ```rust
 fn joined_system(
