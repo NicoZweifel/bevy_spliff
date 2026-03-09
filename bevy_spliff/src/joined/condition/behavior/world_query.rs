@@ -15,8 +15,8 @@ where
     Filter: QueryFilter,
     <Filter as WorldQuery>::State: Clone,
 {
-    type Fetch<'w> = JoinConditionFetch<'w, Ref, Filter>;
-    type State = JoinConditionState<Ref, Filter>;
+    type Fetch<'w> = JoinedFetch<'w, Ref, Filter>;
+    type State = JoinedState<Ref, Filter>;
 
     fn shrink_fetch<'wlong: 'wshort, 'wshort>(fetch: Self::Fetch<'wlong>) -> Self::Fetch<'wshort> {
         fetch
@@ -28,7 +28,7 @@ where
         _last_run: Tick,
         _this_run: Tick,
     ) -> Self::Fetch<'w> {
-        JoinConditionFetch::new(world, state.filter_state.clone())
+        JoinedFetch::new(world, state.target_state.clone())
     }
 
     const IS_DENSE: bool = false;
@@ -44,15 +44,15 @@ where
     unsafe fn set_table<'w>(_: &mut Self::Fetch<'w>, _: &'_ Self::State, _: &'w Table) {}
 
     fn update_component_access(state: &Self::State, access: &mut FilteredAccess) {
-        access.add_component_read(state.ref_id);
+        state.update_access(access);
     }
 
     fn init_state(world: &mut World) -> Self::State {
-        JoinConditionState::new(world.register_component::<Ref>(), Filter::init_state(world))
+        JoinedState::new(world.register_component::<Ref>(), Filter::init_state(world))
     }
 
     fn get_state(components: &Components) -> Option<Self::State> {
-        Some(JoinConditionState::new(
+        Some(JoinedState::new(
             components.get_id(std::any::TypeId::of::<Ref>())?,
             Filter::get_state(components)?,
         ))

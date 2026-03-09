@@ -1,10 +1,12 @@
 use bevy_ecs::{
     component::ComponentId,
     prelude::*,
-    query::{EcsAccessLevel, EcsAccessType, FilteredAccess, QueryData, WorldQuery},
+    query::{EcsAccessLevel, EcsAccessType, QueryData, WorldQuery},
     world::unsafe_world_cell::{UnsafeEntityCell, UnsafeWorldCell},
 };
 use std::iter;
+
+
 
 pub trait JoinResultMapper: 'static + Send + Sync {
     type Item<'w, 's, D: QueryData>;
@@ -48,21 +50,13 @@ pub(crate) trait FetchJoiner<'w, Ref: Joinable + Component> {
 pub(crate) trait JoinState {
     type Data: QueryData;
     fn ref_id(&self) -> ComponentId;
-    fn data_state(&self) -> &<Self::Data as WorldQuery>::State;
-
-    #[inline(always)]
-    fn update_access(&self, access: &mut FilteredAccess) {
-        access.add_component_read(self.ref_id());
-        let mut data_access = FilteredAccess::default();
-        Self::Data::update_component_access(self.data_state(), &mut data_access);
-        access.access_mut().extend(data_access.access());
-    }
+    fn target_state(&self) -> &<Self::Data as WorldQuery>::State;
 
     #[inline(always)]
     fn iter_access(&self) -> impl Iterator<Item = EcsAccessType<'_>> {
         iter::once(EcsAccessType::Component(EcsAccessLevel::Read(
             self.ref_id(),
         )))
-        .chain(Self::Data::iter_access(self.data_state()))
+        .chain(Self::Data::iter_access(self.target_state()))
     }
 }

@@ -19,17 +19,20 @@ where
     type State = JoinedState<Ref, Data>;
 
     fn shrink_fetch<'wlong: 'wshort, 'wshort>(fetch: Self::Fetch<'wlong>) -> Self::Fetch<'wshort> {
-        JoinedFetch::new(fetch.world, fetch.data_state)
+        JoinedFetch::new(fetch.world, fetch.target_state)
     }
+
     unsafe fn init_fetch<'w>(
         world: UnsafeWorldCell<'w>,
         state: &'_ Self::State,
         _last_run: Tick,
         _this_run: Tick,
     ) -> Self::Fetch<'w> {
-        JoinedFetch::new(world, state.data_state.clone())
+        JoinedFetch::new(world, state.target_state.clone())
     }
+
     const IS_DENSE: bool = false;
+
     unsafe fn set_archetype<'w>(
         _: &mut Self::Fetch<'w>,
         _: &'_ Self::State,
@@ -37,6 +40,7 @@ where
         _: &'w Table,
     ) {
     }
+
     unsafe fn set_table<'w>(_: &mut Self::Fetch<'w>, _: &'_ Self::State, _: &'w Table) {}
 
     fn update_component_access(state: &Self::State, access: &mut FilteredAccess) {

@@ -19,7 +19,7 @@ where
     type State = JoinedState<Ref, Data>;
 
     fn shrink_fetch<'wlong: 'wshort, 'wshort>(fetch: Self::Fetch<'wlong>) -> Self::Fetch<'wshort> {
-        JoinedFetch::new(fetch.world, fetch.data_state)
+        JoinedFetch::new(fetch.world, fetch.target_state)
     }
 
     unsafe fn init_fetch<'w>(
@@ -28,7 +28,7 @@ where
         _last_run: Tick,
         _this_run: Tick,
     ) -> Self::Fetch<'w> {
-        JoinedFetch::new(world, state.data_state.clone())
+        JoinedFetch::new(world, state.target_state.clone())
     }
 
     const IS_DENSE: bool = false;

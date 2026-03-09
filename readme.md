@@ -19,7 +19,7 @@ Imagine you are writing a system that needs to fetch nested conditional data,
 currently this would look like sth like this in bevy:
 
 ```rust
-fn manual_join_system(
+fn manual_system(
     q_characters: Query<(&Name, &Weapons), With<Character>>,
     q_weapons: Query<(&Name, &Legendary)>,
 ) {
@@ -41,7 +41,6 @@ fn spliff_system(
     q: Query<(&Name, Joined<Weapons, &Name>), (With<Character>, JoinCondition<Weapons, With<Legendary>>)>
 ) {
     for (name, weapon_names) in &query {
-        // weapon_names is already a Vec<&Name> filtered by the JoinCondition
         println!("Character {} has legendary weapons: {:?}", name.0, weapon_names);
     }
 }
@@ -50,11 +49,37 @@ fn spliff_system(
 You can use the `type-aliases` feature, which is enabled by default, if you prefer even shorter syntax:
 
 ```rust
-fn spliff_aliased_system(
+fn aliased_spliff_system(
     q: Query<(&Name, J<Weapons, &Name>), (With<Character>, JC<Weapons, With<Legendary>>)>
 ) {
     for (name, weapon_names) in &query {
         println!("Character {} has legendary weapons: {:?}", name.0, weapon_names);
+    }
+}
+```
+
+When managing very complex types you can declare structs and derive `QueryData`, just as you would with complex queries in general:
+
+```rust
+#[derive(QueryData)]
+pub struct CharacterWeaponQueryData {
+    name: &'static Name,
+    weapon_names: J<Weapons, &'static Name>,
+}
+
+#[derive(QueryFilter)]
+pub struct CharacterWeaponFilter {
+    _is_character: With<Character>,
+    _has_legendary: JC<Weapons, With<Legendary>>,
+}
+
+fn spliff_system(query: Query<CharacterWeaponQueryData, CharacterWeaponFilter>) {
+    for character in &query {
+        println!(
+            "Character {} has legendary weapons: {:?}", 
+            character.name.0, 
+            character.weapon_names
+        );
     }
 }
 ```
@@ -87,7 +112,7 @@ These are enabled by default.
 ## Notes / TODOs
 
 - Depends on `bevy_ecs` only.
-- Mutable access would be great, rn it's `ReadOnlyQueryData`.
+- Mutable access on `Joined` would be great, rn it's `ReadOnlyQueryData` for `Joined`.
 - More test cases and organizing suites.
 - Make sure this doesn't do something terribly wrong.
 - If you cannot guarantee a stable order in your data but need to handle all potential matches, 

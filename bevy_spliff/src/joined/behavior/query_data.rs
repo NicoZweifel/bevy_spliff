@@ -20,8 +20,8 @@ where
     <Data as WorldQuery>::State: Clone,
 {
     const IS_READ_ONLY: bool = true;
-
     const IS_ARCHETYPAL: bool = false;
+
     type ReadOnly = Self;
     type Item<'w, 's> = <Ref::Mapper as JoinResultMapper>::Item<'w, 's, Data>;
 
@@ -40,7 +40,7 @@ where
         unsafe {
             let mut data_fetch = Data::init_fetch(
                 fetch.world,
-                &state.data_state,
+                &state.target_state,
                 fetch.world.last_change_tick(),
                 fetch.world.change_tick(),
             );
@@ -53,19 +53,19 @@ where
                     let archetype = fetch.world.archetypes().get(location.archetype_id)?;
 
                     Some(
-                        Data::matches_component_set(&state.data_state, &|id| {
+                        Data::matches_component_set(&state.target_state, &|id| {
                             archetype.contains(id)
                         })
                         .then(|| {
                             Data::set_archetype(
                                 &mut data_fetch,
-                                &state.data_state,
+                                &state.target_state,
                                 archetype,
                                 tables,
                             );
 
                             Data::fetch(
-                                &state.data_state,
+                                &state.target_state,
                                 &mut data_fetch,
                                 target,
                                 location.table_row,

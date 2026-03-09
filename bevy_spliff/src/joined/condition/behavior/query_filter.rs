@@ -23,7 +23,7 @@ where
         unsafe {
             let mut filter_fetch = Filter::init_fetch(
                 fetch.world,
-                &state.filter_state,
+                &state.target_state,
                 fetch.world.last_change_tick(),
                 fetch.world.change_tick(),
             );
@@ -37,18 +37,18 @@ where
                             let archetype = fetch.world.archetypes().get(location.archetype_id)?;
                             let table = fetch.world.storages().tables.get(location.table_id)?;
 
-                            if Filter::matches_component_set(&state.filter_state, &|id| {
+                            if Filter::matches_component_set(&state.target_state, &|id| {
                                 archetype.contains(id)
                             }) {
                                 Filter::set_archetype(
                                     &mut filter_fetch,
-                                    &state.filter_state,
+                                    &state.target_state,
                                     archetype,
                                     table,
                                 );
 
                                 Filter::filter_fetch(
-                                    &state.filter_state,
+                                    &state.target_state,
                                     &mut filter_fetch,
                                     target,
                                     location.table_row,
