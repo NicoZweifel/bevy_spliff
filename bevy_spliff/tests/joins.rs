@@ -235,7 +235,6 @@ fn joined_resilience_to_despawned_targets() {
     assert!(!res.contains(&sword));
 }
 
-
 #[test]
 fn joined_first_mapper_should_return_option() {
     // Arrange
