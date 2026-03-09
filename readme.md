@@ -1,6 +1,6 @@
 # bevy_spliff
 
-A library for doing joins in bevy.
+A crate for doing joins in bevy.
 
 > [!CAUTION]
 > This is an experiment.
