@@ -129,3 +129,11 @@ it is safer to use Joined (J) to fetch a Vec of all matches and then apply your 
 - docs
 - more/better tests
 
+## License
+
+The code is dual-licensed:
+
+* MIT License ([LICENSE-MIT](LICENSE-MIT) or [http://opensource.org/licenses/MIT](http://opensource.org/licenses/MIT))
+* Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0))
+
+
