@@ -63,6 +63,24 @@ fn joined_system(
 }
 ```
 
+or just this if you don't need to use a nested filter condition:
+
+```rust
+fn simple_joined_system(
+    q: Query<
+        (&Name, Joined<Weapons, &Name>),
+        With<Character>,
+    >,
+) {
+    for (name, weapon_names) in &q {
+        println!(
+            "Character {} has weapons: {:?}",
+            name, weapon_names
+        );
+    }
+}
+```
+
 You can use the `type-aliases` feature, which is enabled by default, if you prefer even shorter syntax:
 
 ```rust
