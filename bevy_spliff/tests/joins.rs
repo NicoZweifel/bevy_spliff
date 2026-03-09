@@ -1,5 +1,4 @@
 use bevy_ecs::{lifecycle::HookContext, prelude::*, world::DeferredWorld};
-use bevy_ecs::query::{QueryData, QueryFilter};
 use bevy_spliff::prelude::*;
 
 const PLAYER_NAME: &str = "Player";
