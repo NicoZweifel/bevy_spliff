@@ -137,10 +137,10 @@ fn spliff_system(query: Query<CharacterWeaponQueryData, CharacterWeaponFilter>) 
 | Feature              | Type Alias | Description | Example Usage |
 |----------------------| --- | --- | --- |
 | **Joined**           | `J<R, D>` | Fetches data from all valid targets. Returns `Vec` or `Option` based on the mapper. | `J<Weapons, &Name>` |
-| **Joined First**     | `JF<R, D>` | Traverses a relationship and returns only the first target that matches the query data. | `JS<Armors, &Name>` |
-| **Join Condition**   | `JC<R, F>` | A query filter that checks if any target of a relationship satisfies a specific condition. | `JF<Weapons, With<Legendary>>` |
+| **Joined First**     | `JF<R, D>` | Traverses a relationship and returns only the first target that matches the query data. | `JF<Armors, &Name>` |
+| **Join Condition**   | `JC<R, F>` | A query filter that checks if any target of a relationship satisfies a specific condition. | `JC<Weapons, With<Legendary>>` |
 | **Derive Macro**     | `Joinable` | Automatically implements the `Joinable` trait for structs containing an `Entity` or `Vec<Entity>`. | `#[derive(Joinable)]` |
-| **Deep Nesting**     | N/A | Supports recursive joins (joining on a joined result) for complex hierarchy traversals. | `JF<A, (Data, JF<B, Data>)>` |
+| **Deep Nesting**     | N/A | Supports recursive joins (joining on a joined result) for complex hierarchy traversals. | `J<A, (Data, J<B, Data>)>` |
 | **Built-in Support** | N/A | Native support for standard Bevy hierarchy components like `Children` and `ChildOf`. | `J<Children, &Name>` |
 | **Change Detection** | N/A | Integrates with Bevy's change detection within the join filters. | `JC<R, Changed<T>>` |
 
@@ -149,6 +149,15 @@ fn spliff_system(query: Query<CharacterWeaponQueryData, CharacterWeaponFilter>) 
 * **`R` (Relationship)**: A component implementing `Joinable` (e.g., a field containing a target `Entity`).
 * **`D` (Data)**: The `QueryData` you wish to retrieve from the target entity.
 * **`F` (Filter)**: A `QueryFilter` to validate the target entity without fetching data.
+
+## SQL Equivalents
+
+| `bevy_spliff` | SQL Equivalent | Behavior | Empty/Broken List Behavior |
+| :--- | :--- | :--- | :--- |
+| **`J<R, D>`** | `LEFT JOIN` | Fetches data if related targets exist. | Keeps the root entity, returns an empty `Vec`. |
+| **`JF<R, D>`** | `INNER JOIN ... LIMIT 1` | Fetches the first valid match. | Filters out the root entity from the query. |
+| **`JC<R, F>`** | `WHERE EXISTS (...)` | Filters based on related targets without fetching their data. | Filters out the root entity from the query. |
+
 
 ## Feature Flags
 

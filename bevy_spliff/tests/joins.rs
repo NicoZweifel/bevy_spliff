@@ -213,7 +213,7 @@ fn joined_should_yield_empty() {
 
     // Assert
     assert_eq!(res.len(), 1);
-    assert_eq!(res[0].len(), 0);
+    assert!(res[0].is_empty());
 }
 
 #[test]
@@ -234,6 +234,7 @@ fn joined_resilience_to_despawned_targets() {
     assert!(init_res.contains(&sword));
     assert!(!res.contains(&sword));
 }
+
 
 #[test]
 fn joined_first_mapper_should_return_option() {
@@ -349,6 +350,20 @@ fn joined_first_should_return_empty() {
         .query::<(Entity, JF<Weapons, JF<Armors, &Name>>)>()
         .iter(&world)
         .collect();
+
+    // Assert
+    assert!(res.is_empty());
+}
+
+#[test]
+fn joined_first_empty_should_filter_out_root() {
+    // Arrange
+    let mut world = World::new();
+
+    world.spawn((Name::new("Unarmed"), Weapons(vec![])));
+
+    // Act
+    let res: Vec<_> = world.query::<JF<Weapons, &Name>>().iter(&world).collect();
 
     // Assert
     assert!(res.is_empty());
@@ -483,4 +498,21 @@ fn join_condition_should_be_true_if_any_target_is_valid() {
     // Assert
     assert_eq!(res.len(), 1);
     assert_eq!(res[0], player);
+}
+
+#[test]
+fn join_condition_empty_should_yield_nothing() {
+    // Arrange
+    let mut world = World::new();
+
+    world.spawn((Name::new("Empty"), Weapons(vec![])));
+
+    // Act
+    let res: Vec<Entity> = world
+        .query_filtered::<Entity, JC<Weapons, With<Name>>>()
+        .iter(&world)
+        .collect();
+
+    // Assert
+    assert!(res.is_empty());
 }
