@@ -16,7 +16,7 @@ cargo add bevy_spliff
 ### Usage
 
 Imagine you are writing a system that needs to fetch nested conditional data, 
-currently this would look like sth like this in bevy:
+currently this would look sth like this:
 
 ```rust
 fn manual_system(
@@ -38,10 +38,16 @@ Using `bevy_spliff` this simplifies to:
 
 ```rust
 fn spliff_system(
-    q: Query<(&Name, Joined<Weapons, &Name>), (With<Character>, JoinCondition<Weapons, With<Legendary>>)>
+    q: Query<
+        (&Name, Joined<Weapons, &Name>),
+        (With<Character>, JoinCondition<Weapons, With<Legendary>>),
+    >,
 ) {
     for (name, weapon_names) in &query {
-        println!("Character {} has legendary weapons: {:?}", name.0, weapon_names);
+        println!(
+            "Character {} has legendary weapons: {:?}",
+            name.0, weapon_names
+        );
     }
 }
 ```
@@ -50,10 +56,13 @@ You can use the `type-aliases` feature, which is enabled by default, if you pref
 
 ```rust
 fn aliased_spliff_system(
-    q: Query<(&Name, J<Weapons, &Name>), (With<Character>, JC<Weapons, With<Legendary>>)>
+    q: Query<(&Name, J<Weapons, &Name>), (With<Character>, JC<Weapons, With<Legendary>>)>,
 ) {
     for (name, weapon_names) in &query {
-        println!("Character {} has legendary weapons: {:?}", name.0, weapon_names);
+        println!(
+            "Character {} has legendary weapons: {:?}",
+            name.0, weapon_names
+        );
     }
 }
 ```
