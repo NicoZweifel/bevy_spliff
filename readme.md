@@ -180,9 +180,9 @@ fn complex_joined_system(query: Query<CharacterWeaponQueryData, CharacterWeaponF
 
 ### Key Definitions
 
-* `Ref` : A relational component implementing `Joinable` (e.g., a field containing a target `Entity`).
-* `Data` : The `QueryData` you wish to retrieve from the target entity.
-* `Filter` : A `QueryFilter` to validate the target entity without fetching data.
+* `Ref`: A relational component implementing `Joinable` (e.g., a field containing a target `Entity`).
+* `Data`: The `QueryData` you wish to retrieve from the target entity.
+* `Filter`: A `QueryFilter` to validate the target entity without fetching data.
 
 ## SQL Analogs
 
