@@ -206,15 +206,15 @@ fn complex_joined_system(query: Query<CharacterItemQueryData, CharacterItemFilte
 
 ## Overview
 
-| Feature              | Type Alias        | Description | Example Usage                  |
-|----------------------|-------------------| --- |--------------------------------|
-| **Joined**           | `J<Ref, Data>`    | Fetches data from all valid targets. Returns `Vec` or `Option` based on the mapper. | `J<Weapons, &Name>`            |
-| **Joined First**     | `JF<Ref, Data>`   | Traverses a relationship and returns only the first target that matches the query data. | `JF<Weapons, &Name>`           |
-| **Join Condition**   | `JC<Ref, Filter>` | A query filter that checks if any target of a relationship satisfies a specific condition. | `JC<Weapons, With<Legendary>>` |
-| **Derive Macro**     | `Joinable`        | Automatically implements the `Joinable` trait for structs containing an `Entity` or `Vec<Entity>`. | `#[derive(Joinable)]`          |
-| **Deep Nesting**     | N/A               | Supports recursive joins (joining on a joined result) for complex hierarchy traversals. | `J<A, (Data, J<B, Data>)>`     |
-| **Built-in Support** | N/A               | Native support for standard Bevy hierarchy components like `Children` and `ChildOf`. | `J<Children, &Name>`           |
-| **Change Detection** | N/A               | Integrates with Bevy's change detection within the join filters. | `JC<R, Changed<T>>`            |
+| Feature              | Type Alias        | Description                                                                                                                                                             | Example Usage                  |
+|----------------------|-------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------|
+| **Joined**           | `J<Ref, Data>`    | Fetches a `Vec` or `Option` containing targets matching Data. If combined with `JC`, it eagerly fetches the full list as long as at least one target passes the filter. | `J<Weapons, &Name>`            |
+| **Joined First**     | `JF<Ref, Data>`   | Traverses a relationship and returns only the first target that matches the query data.                                                                                 | `JF<Weapons, &Name>`           |
+| **Join Condition**   | `JC<Ref, Filter>` | A query filter that checks if any target of a relationship satisfies a specific condition.                                                                              | `JC<Weapons, With<Legendary>>` |
+| **Derive Macro**     | `Joinable`        | Automatically implements the `Joinable` trait for structs containing an `Entity` or `Vec<Entity>`.                                                                      | `#[derive(Joinable)]`          |
+| **Deep Nesting**     | N/A               | Supports recursive joins (joining on a joined result) for complex hierarchy traversals.                                                                                 | `J<A, (Data, J<B, Data>)>`     |
+| **Built-in Support** | N/A               | Native support for standard Bevy hierarchy components like `Children` and `ChildOf`.                                                                                    | `J<Children, &Name>`           |
+| **Change Detection** | N/A               | Integrates with Bevy's change detection within the join filters.                                                                                                        | `JC<R, Changed<T>>`            |
 
 ### Key Definitions
 
