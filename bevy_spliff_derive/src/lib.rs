@@ -6,13 +6,15 @@ const ONLY_STRUCTS: &str = "Joinable can only be derived for structs";
 const NO_FIELDS: &str = "Joinable struct must have at least one field";
 const AMBIGUOUS_FIELDS: &str = "Multiple fields found. Please mark the join target with #[join]";
 
-#[proc_macro_derive(Joinable, attributes(join))]
+#[proc_macro_derive(Joinable, attributes(join, relationship, relationship_target))]
 pub fn derive_joinable(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    expand_joinable(input).unwrap_or_else(|e| e.to_compile_error().into())
+    expand_joinable(input)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
 }
 
-fn expand_joinable(input: DeriveInput) -> syn::Result<TokenStream> {
+fn expand_joinable(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let name = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let fields = match &input.data {
@@ -42,7 +44,7 @@ fn expand_joinable(input: DeriveInput) -> syn::Result<TokenStream> {
         )
     };
 
-    let expanded = quote! {
+    Ok(quote! {
         impl #impl_generics Joinable for #name #ty_generics #where_clause {
             type Mapper = #mapper;
             type Out<'a> = #out where Self: 'a;
@@ -51,25 +53,30 @@ fn expand_joinable(input: DeriveInput) -> syn::Result<TokenStream> {
                 #target_expr
             }
         }
-    };
-
-    Ok(TokenStream::from(expanded))
+    })
 }
 
 fn is_vec(ty: &Type) -> bool {
     if let Type::Path(tp) = ty
         && let Some(seg) = tp.path.segments.last()
     {
-        return seg.ident == "Vec";
+        seg.ident == "Vec"
+    } else {
+        false
     }
-    false
 }
 
 fn analyze_fields(fields: &syn::Fields) -> syn::Result<(usize, &syn::Field)> {
     fields
         .iter()
         .enumerate()
-        .find(|(_, f)| f.attrs.iter().any(|attr| attr.path().is_ident("join")))
+        .find(|(_, f)| {
+            f.attrs.iter().any(|attr| {
+                attr.path().is_ident("join")
+                    || attr.path().is_ident("relationship")
+                    || attr.path().is_ident("relationship_target")
+            })
+        })
         .or_else(|| {
             (fields.len() == 1)
                 .then(|| fields.iter().enumerate().next())
@@ -87,92 +94,135 @@ fn analyze_fields(fields: &syn::Fields) -> syn::Result<(usize, &syn::Field)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use syn::{ItemStruct, parse_quote};
+    use syn::parse_quote;
 
     #[test]
-    fn single_tuple_should_fallback() {
-        let st: ItemStruct = parse_quote! { struct Player(Entity); };
-        let (idx, field) = analyze_fields(&st.fields).unwrap();
-        assert_eq!(idx, 0);
-        assert!(!is_vec(&field.ty));
+    fn single_tuple_should_fallback_to_single_join() {
+        let input: DeriveInput = parse_quote! { struct Player(Entity); };
+
+        let res = expand_joinable(input);
+
+        let output = res.unwrap().to_string();
+        assert!(output.contains("SingleJoin"));
+        assert!(output.contains("self . 0"));
     }
 
     #[test]
-    fn single_tuple_vec_should_fallback() {
-        let st: ItemStruct = parse_quote! { struct Player(Vec<Entity>); };
-        let (idx, field) = analyze_fields(&st.fields).unwrap();
-        assert_eq!(idx, 0);
-        assert!(is_vec(&field.ty));
+    fn single_tuple_vec_should_fallback_to_multiple_join() {
+        let input: DeriveInput = parse_quote! { struct Player(Vec<Entity>); };
+
+        let res = expand_joinable(input);
+
+        let output = res.unwrap().to_string();
+        assert!(output.contains("MultipleJoin"));
+        assert!(output.contains("self . 0"));
     }
 
     #[test]
-    fn multi_tuple_should_offset() {
-        let st: ItemStruct = syn::parse_quote! {
-            struct Offset(f32, #[join] Entity);
-        };
-        let (idx, _) = analyze_fields(&st.fields).unwrap();
+    fn multi_tuple_with_join_should_target_index() {
+        let input: DeriveInput = parse_quote! { struct Offset(f32, #[join] Entity); };
 
-        assert_eq!(idx, 1);
+        let res = expand_joinable(input);
+
+        let output = res.unwrap().to_string();
+        assert!(output.contains("self . 1"));
     }
 
     #[test]
-    fn named_field_attribute_should_target() {
-        let st: ItemStruct = parse_quote! {
-            struct Armor {
-                val: f32,
-                #[join]
-                target: Entity
-            }
-        };
+    fn named_field_with_join_should_target_ident() {
+        let input: DeriveInput = parse_quote! { struct Armor { val: f32, #[join] target: Entity } };
 
-        let (idx, field) = analyze_fields(&st.fields).unwrap();
+        let res = expand_joinable(input);
 
-        assert_eq!(idx, 1);
-        assert_eq!(field.ident.as_ref().unwrap(), "target");
-        assert!(field.attrs.iter().any(|a| a.path().is_ident("join")));
+        let output = res.unwrap().to_string();
+        assert!(output.contains("self . target"));
     }
 
     #[test]
-    fn ambiguous_multi_field_should_error() {
-        let st: ItemStruct = parse_quote! {
-            struct Ambiguous { a: Entity, b: Entity }
-        };
-
-        let result = analyze_fields(&st.fields);
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), AMBIGUOUS_FIELDS);
-    }
-
-    #[test]
-    fn empty_struct_should_error() {
-        let st: ItemStruct = parse_quote! { struct Empty; };
-
-        let result = analyze_fields(&st.fields);
-
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), NO_FIELDS);
-    }
-
-    #[test]
-
-    fn empty_braces_should_error() {
-        let st: ItemStruct = parse_quote! { struct Empty {} };
-
-        let result = analyze_fields(&st.fields);
-
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), NO_FIELDS);
-    }
-
-    #[test]
-    fn not_struct_should_error() {
+    fn relationship_attribute_should_target_field() {
         let input: DeriveInput = parse_quote! {
-            enum NotStruct { Variant }
+            struct WeaponOf(#[relationship(target = Weapons)] Entity);
         };
 
-        let result = expand_joinable(input);
+        let res = expand_joinable(input);
 
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), ONLY_STRUCTS);
+        let output = res.unwrap().to_string();
+        assert!(output.contains("self . 0"));
+    }
+
+    #[test]
+    fn relationship_target_attribute_should_target_vec_field() {
+        let input: DeriveInput = parse_quote! {
+            struct Weapons(#[relationship_target(rel = WeaponOf)] Vec<Entity>);
+        };
+
+        let res = expand_joinable(input);
+
+        let output = res.unwrap().to_string();
+        assert!(output.contains("MultipleJoin"));
+        assert!(output.contains("self . 0"));
+    }
+
+    #[test]
+    fn is_vec_should_fail_on_non_vec_path() {
+        let ty: Type = parse_quote! { Option<Entity> };
+
+        let res = is_vec(&ty);
+
+        assert!(!res);
+    }
+
+    #[test]
+    fn is_vec_should_fail_on_non_path() {
+        let ty: Type = parse_quote! { &Entity };
+
+        let res = is_vec(&ty);
+
+        assert!(!res);
+    }
+
+    #[test]
+    fn is_vec_should_fail_on_plain_type() {
+        let ty: Type = parse_quote! { u32 };
+
+        let res = is_vec(&ty);
+
+        assert!(!res);
+    }
+
+    #[test]
+    fn expansion_should_error_on_enum() {
+        let input: DeriveInput = parse_quote! { enum NotStruct { V } };
+
+        let res = expand_joinable(input);
+
+        assert_eq!(res.unwrap_err().to_string(), ONLY_STRUCTS);
+    }
+
+    #[test]
+    fn expansion_should_error_on_union() {
+        let input: DeriveInput = parse_quote! { union NotSupported { f: Entity } };
+
+        let res = expand_joinable(input);
+
+        assert_eq!(res.unwrap_err().to_string(), ONLY_STRUCTS);
+    }
+
+    #[test]
+    fn expansion_should_error_on_empty_struct() {
+        let input: DeriveInput = parse_quote! { struct Empty; };
+
+        let res = expand_joinable(input);
+
+        assert_eq!(res.unwrap_err().to_string(), NO_FIELDS);
+    }
+
+    #[test]
+    fn expansion_should_error_on_ambiguous_fields() {
+        let input: DeriveInput = parse_quote! { struct Ambi(Entity, Entity); };
+
+        let res = expand_joinable(input);
+
+        assert_eq!(res.unwrap_err().to_string(), AMBIGUOUS_FIELDS);
     }
 }
