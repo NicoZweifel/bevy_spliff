@@ -199,7 +199,10 @@ graph LR
 > In deeply nested trees, using JC in your QueryFilter acts as a Scout that prunes the search.
 > It stops the engine from even attempting to fetch or allocate data for a branch that doesn't lead to a match.
 
-You can nest these types indefinitely to traverse complex hierarchies, such as a Character $\rightarrow$ Vault $\rightarrow$ Backpack $\rightarrow$ Items.
+You can nest these types indefinitely to traverse complex hierarchies,
+such as a Character $\rightarrow$ Vault $\rightarrow$ Backpack $\rightarrow$ Items, e.g.,
+
+Get all items in all inventories of all vaults for all armed characters:
 
 ```rust
 fn deeply_nested_system(
