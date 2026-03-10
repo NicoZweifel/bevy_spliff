@@ -1,6 +1,10 @@
 # bevy_spliff 💨
 [![License](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](https://github.com/NicoZweifel/bevy_spliff?tab=readme-ov-file#licensecreditsinspirationsreferences)
 [![Crates.io](https://img.shields.io/crates/v/bevy_spliff.svg)](https://crates.io/crates/bevy_spliff)
+[![Downloads](https://img.shields.io/crates/d/bevy_spliff.svg)](https://crates.io/crates/bevy_spliff)
+[![Docs](https://docs.rs/bevy_spliff/badge.svg)](https://docs.rs/bevy_spliff/)
+[![CI](https://github.com/nicozweifel/bevy_spliff/workflows/ci/badge.svg)](https://github.com/NicoZweifel/bevy_spliff/actions)
+
 
 A crate for doing joins in bevy.
 
