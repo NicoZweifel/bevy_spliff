@@ -46,160 +46,209 @@ struct StorageItems(Vec<Entity>);
 struct StorageItemOf(pub Entity);
 ```
 
-### Usage
+## Usage
 
-Imagine you are writing a system that needs to fetch nested conditional data, 
+Imagine you are writing a system that needs to fetch nested data, 
 currently this would look sth like this:
 
 ```rust
 fn manual_system(
     q_characters: Query<(&Name, &InventoryItems), With<Character>>,
-    q_items: Query<&Name, With<Legendary>>,
+    q_items: Query<&Name>,
 ) {
     for (name, inventory) in &q_characters {
         let item_names: Vec<&Name> = inventory.0.iter()
             .filter_map(|&e| q_items.get(e).ok())
             .collect();
 
-        println!("Character {:?} has legendary items: {:?}", name, item_names);
+        println!("Character {:?} has items: {:?}", name, item_names);
     }
 }
 ```
+### Simple Join
 
 This simplifies to:
 
 ```rust
-fn joined_system(
-    q: Query<
-        (&Name, Joined<InventoryItems, &Name>),
-        (With<Character>, JoinCondition<InventoryItems, With<Legendary>>),
-    >,
-) {
+fn join_system(q: Query<(&Name, J<InventoryItems, &Name>), With<Character>>) {
     for (name, item_names) in &q {
-        println!("Character {:?} has legendary items: {:?}", name, item_names);
+        println!("{name:?} has items: {item_names:?}");
+    }
+}
+```
+> [!NOTE]
+> By default, `Joined<R, D>` (or `J<R, D>`) fetches all related entities. If none exist,
+> it returns an empty `Vec` or `None` but does not skip the root entity.
+
+### Join First 
+
+`JoinedFirst<R, D>` (or `JF<R, D>`) fetches the first valid target. If no target satisfies the data requirements, the root entity is skipped.
+
+```rust
+fn join_first_system(q: Query<(&Name, JF<InventoryItems, (&Name, &Legendary)>), With<Character>>) {
+    for (name, (item_name, _)) in &q {
+        println!("{name:?} has a legendary: {item_name:?}");
     }
 }
 ```
 
-Or just this if you don't need to use a nested filter condition:
+### Understanding the Filter Hierarchy
+
+You can control filtering at two levels. The following examples show how to progress from loose (root) to strict (nested) filtering.
+
+#### The "Loose" Filter 
+
+Use `JoinCondition<R, F>` (or `JC<R, F>`) in your Query Filter. 
+This ensures the root entity is only processed if at least one related entity satisfies the join condition.
 
 ```rust
-fn simple_joined_system(
-    q: Query<
-        (&Name, Joined<InventoryItems, &Name>),
-        With<Character>,
-    >,
+fn loose_filter(
+    q: Query<(&Name, J<InventoryItems, &Name>), (With<Character>, JC<InventoryItems, With<Legendary>>)>
 ) {
-    for (name, item_names) in &q {
-        println!(
-            "Character {:?} has items: {:?}",
-            name, item_names 
-        );
-    }
+    // Only legendary owners enter here, but we see their Rags and Potions too.
 }
 ```
 
-You can use the `type-aliases` feature, which is enabled by default, if you prefer the short syntax:
+#### The "Strict" Filter
+
+To filter the joined results (the `Vec` or `Option`) so it only contains items matching your criteria, include the filter in the `Query Data`.
 
 ```rust
-fn aliased_joined_system(
-    q: Query<(&Name, J<Weapons, &Name>), (With<Character>, JC<Weapons, With<Legendary>>)>,
+fn strict_filter(
+    q: Query<(&Name, J<InventoryItems, (&Name, &Legendary)>), With<Character>>
 ) {
-    for (name, item_names) in &q {
-        println!("Character {:?} has legendary weapons: {:?}", name, item_names);
-    }
+    // Every character enters here, but the Vec ONLY contains legendary items.
 }
 ```
 
-This also works for deeply nested relational queries, e.g. the entity has a "Vault" containing a "Backpack" with legendary weapons:
+#### Combined (The "True" Inner Join)
 
 ```rust
-fn deeply_nested_joined_system(
+fn combined_filter(
     q: Query<
-        (
-            &Name,
-            J<
-                StorageItems,
-                (
-                    &Name,
-                    J<InventoryItems, (&Name, J<Weapons, (&Name, &Legendary)>)>,
-                ),
-            >,
-        ),
-        (
-            With<Character>,
-            JC<StorageItems, JC<InventoryItems, JC<Weapons, With<Legendary>>>>,
-        ),
+        (&Name, J<InventoryItems, (&Name, &Legendary)>), 
+        JC<InventoryItems, With<Legendary>>
+    >
+) {
+    // Only legendary owners enter, and they only see their legendary items.
+}
+```
+
+>[!IMPORTANT]
+> If you use a `JC` filter but don't mirror that requirement in your `J` or `JF` data, you will get "unfiltered" results.
+>
+> For `J`: You will get a `Vec` containing all items, even if only one triggered the `JC`.
+>
+> For `JF`: You will get the first item in the list, even if a later item was the one that satisfied the `JC`.
+>
+> To ensure your fetched data matches your filter, always include the relevant component/filter in the `Joined` or `JoinedFirst` type.
+
+#### Visualizing the logic
+```mermaid
+graph TD
+    subgraph World
+        C[Character: Player]
+        Junction(( ))
+        I1[Item: Rusty Sword]
+        I2[Item: Fancy Sword]
+        I2 -.-> L[Component: Legendary]
+
+        C ---|InventoryItems| Junction
+        Junction --> I1
+        Junction --> I2
+    end
+
+    subgraph "Query Logic"
+        direction TB
+        Filter{"JC<Inventory, With<Legendary>>"}
+        DataFetch[["J<Inventory, &Name>"]]
+    end
+
+    C --> Filter
+    Filter -- "Pass: JC Root Match" --> DataFetch
+    
+    I1 -- "Data Filter: Skip" --> DataFetch
+    I2 -- "Data Filter: Collect" --> DataFetch
+
+    DataFetch --> Result["Result: (Player, ['Fancy Sword'])"]
+
+    style Junction fill:#333,stroke:#333,width:5px,height:5px
+    style Filter fill:#fff,stroke:#333,stroke-width:2px
+    style I2 fill:#f9f,stroke:#333
+    style L fill:#f9f,stroke:#333
+``` 
+
+### Deep Nesting
+
+In complex hierarchies, the `JC` acts as a "pathfinder" for the `J` fetcher.
+
+```mermaid
+graph LR
+    subgraph "Filter Path (The Scout)"
+        C_F[Character] -->|JC| V_F[Vault] -->|JC| B_F[Backpack] -->|With| W_F[Legendary]
+    end
+    
+    subgraph "Data Path (The Fetcher)"
+        C_D[Character] ==>|J| V_D[Vault] ==>|J| B_D[Backpack] ==>|J| W_D[Name]
+    end
+
+    C_F -. "Prunes search" .-> C_D
+```
+
+> [!TIP]
+> In deeply nested trees, using JC in your QueryFilter acts as a Scout that prunes the search.
+> It stops the engine from even attempting to fetch or allocate data for a branch that doesn't lead to a match.
+
+You can nest these types indefinitely to traverse complex hierarchies, such as a Character $\rightarrow$ Vault $\rightarrow$ Backpack $\rightarrow$ Items.
+
+```rust
+fn deeply_nested_system(
+    q: Query<
+        (&Name, J<StorageItems, (&Name, J<InventoryItems, &Name>)>),
+        (With<Character>, JC<StorageItems, JC<InventoryItems, With<Weapon>>>),
     >,
 ) {
-    for (character_name, storages) in &q {
-        for (storage_name, inventories) in storages {
-            for (inventory_name, weapons) in inventories {
-                let weapon_names: Vec<&Name> = weapons.iter().map(|(n, _)| n).collect();
-                println!(
-                    "{:?} has a {:?} containing a {:?} with legendary weapons: {:?}",
-                    character_name, storage_name, inventory_name, weapon_names
-                );
-            }
+for (character_name, storages) in &q {
+    for (storage_name, inventories) in storages {
+        for inventory_item_name in inventories {
+            println!(
+                "Character {} has a {} containing an item: {}",
+                character_name, storage_name, inventory_item_name
+            );
         }
     }
 }
 ```
 
-You can also use `JoinedFirst` or `JF` to inner join on the first match, e.g.,
-each entity has a "Vault" containing a "Backpack" and the first legendary weapon found it finds.
+### Readability 
 
-```rust
-fn deeply_nested_joined_first_system(
-    q: Query<
-        (
-            &Name,
-            JF<
-                StorageItems,
-                (
-                    &Name,
-                    JF<InventoryItems, (&Name, JF<Weapons, (&Name, &Legendary)>)>,
-                ),
-            >,
-        ),
-        (
-            With<Character>,
-            JC<StorageItems, JC<InventoryItems, JC<Weapons, With<Legendary>>>>,
-        ),
-    >,
-) {
-    for (character_name, (storage_name, (inventory_name, (weapon_name, _)))) in &q {
-        println!(
-            "{:?} has a {:?} containing a {:?} with legendary weapon: {:?}",
-            character_name, storage_name, inventory_name, weapon_name
-        );
-    }
-}
-```
-
-For complex systems with deeply nested queries, you can use `J`, `JF`, and `JC` inside structs that derive QueryData or QueryFilter. 
+For complex systems with deeply nested fully filtered queries, you can use `J`, `JF`, and `JC` inside structs that derive QueryData or QueryFilter. 
 This might resolve warnings/readability issues and allows you to provide descriptive names for your joined data:
 
 ```rust
 #[derive(QueryData)]
-pub struct CharacterItemQueryData {
-    name: &'static Name,
-    items: J<InventoryItems, &'static Name>,
+pub struct DeepCharacterData {
+    pub name: &'static Name,
+    pub storages: J<StorageItems, StorageLevel>,
+}
+
+#[derive(QueryData)]
+pub struct StorageLevel {
+    pub name: &'static Name,
+    pub inventories: J<InventoryItems, (&'static Name, &'static Legendary)>,
 }
 
 #[derive(QueryFilter)]
-pub struct CharacterItemFilter {
-    _is_character: With<Character>,
-    _has_legendary: JC<InventoryItems, With<Legendary>>,
+pub struct CharacterFilter {
+  _is_character: With<Character>,
+  _has_legendary: JC<StorageItems, JC<InventoryItems, With<Legendary>>>,
 }
 
-fn complex_joined_system(query: Query<CharacterItemQueryData, CharacterItemFilter>) {
-    for character in &query {
-        println!(
-            "Character {:?} has legendary items: {:?}", 
-            character.name, 
-            character.items
-        );
+fn cleaned_up_system(q: Query<DeepCharacterData, CharacterFilter>) {
+    for character in &q {
+        for storage in character.storages {
+            // storage.name, storage.inventories...
+        }
     }
 }
 ```
@@ -244,7 +293,7 @@ Because Bevy queries do not duplicate the "Root" entity for multiple matches (un
 > 
 > To create a strict 1-to-Many Inner Join (where the resulting Vec only contains specific targets, 
 > AND the root entity is skipped if there are zero matches), 
-> require the component in your Data tuple and include JC in your query filter:
+> require the component in your Data tuple and include `JC` in your query filter:
 > `Query<(&Name, J<Weapons, (&Name, &Legendary)>), JC<Weapons, With<Legendary>>>`
 > 
 > You can also use `Has` to filter in the system body, if desired.
