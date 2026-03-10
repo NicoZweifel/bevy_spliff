@@ -39,9 +39,8 @@ impl WeaponOf {
     }
 }
 
-/// For the purpose of testing deeply nested queries `Weapons` can be related to `ArmorOf` parts as well.
-///
-/// E.g. a weapon in a pocket.
+/// For the purpose of testing deeply nested queries `Weapons` can be related to `ArmorOf` parts as well,
+/// e.g., a weapon in a pocket.
 #[derive(Component, Joinable, Clone)]
 #[component(on_add = Self::on_add)]
 #[relationship(relationship_target = Armors)]
