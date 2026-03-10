@@ -86,7 +86,7 @@ fn simple_joined_system(
 }
 ```
 
-You can use the `type-aliases` feature, which is enabled by default, if you prefer even shorter syntax:
+You can use the `type-aliases` feature, which is enabled by default, if you prefer the short syntax:
 
 ```rust
 fn aliased_joined_system(
