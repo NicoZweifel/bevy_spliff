@@ -200,7 +200,7 @@ graph LR
 > It stops the engine from even attempting to fetch or allocate data for a branch that doesn't lead to a match.
 
 You can nest these types indefinitely to traverse complex hierarchies,
-such as a Character $\rightarrow$ Vault $\rightarrow$ Backpack $\rightarrow$ Items, e.g.,
+such as a Character $\rightarrow$ Vault $\rightarrow$ Backpack $\rightarrow$ Items hierarchy, e.g.,
 
 Get all items in all inventories of all vaults for all armed characters:
 
