@@ -224,18 +224,18 @@ fn complex_joined_system(query: Query<CharacterItemQueryData, CharacterItemFilte
 
 ## SQL Analogs
 
-If you are coming from a relational database background, here is how `bevy_spliff` types conceptually map to SQL operations. 
+If you are coming from a relational database background, here is how `bevy_spliff` types conceptually map to standard SQL operations. 
 
-Because Bevy queries do not duplicate the "Root" entity for multiple matches (unlike standard SQL joins), `bevy_spliff` relies on Bevy's native query resolution to filter targets:
+Because Bevy queries do not duplicate the "Root" entity for multiple matches (unlike standard SQL joins, which return multiple rows), `bevy_spliff` instead aggregates the targets into a `Vec`.
 
-| `bevy_spliff`                         | SQL Equivalent                                     | Behavior                                                                            | Empty/Broken List Behavior |
-|:--------------------------------------|:---------------------------------------------------|:------------------------------------------------------------------------------------| :--- |
-| `J<Ref, Data>`                        | `LEFT JOIN target ON target.Data IS NOT NULL`      | Fetches targets that have `Data`.                                                   | Keeps the root entity, returns an empty `Vec`. |
-| `J<Ref, Option<Data>>`                | `LEFT JOIN target`                                 | Fetches all targets, wrapping data in `Option`.                                     | Keeps the root entity, returns an empty `Vec`. |
-| `JF<Ref, Data>`                       | `INNER JOIN target WHERE target.Data IS NOT NULL`  | Fetches the first target that has `Data`.                                           | Filters out the root entity from the query. |
-| `JC<Ref, Filter>`                     | `WHERE EXISTS (SELECT 1 FROM target WHERE Filter)` | Strict filter condition on the entire row without fetching data.                    | Filters out the root entity from the query. |
-| `J<Ref, Data>` + `JC<Ref, Filter>`    | `LEFT JOIN target ... WHERE EXISTS (...)`          | Fetches **all** matches as a `Vec`, strictly requires at least one target to pass `JC`. | Filters out the root entity from the query. |
-| `J<Ref, (Data, &C)> + JC<Ref, With<C>>` | `INNER JOIN target` (1-to-Many)                    | Filters the yielded `Vec` to matching targets only, and requires at least one match. | Filters out the root entity from the query. |
+| `bevy_spliff`                           | SQL Concept                     | Behavior                                                                                  | Empty/Broken List Behavior |
+|:----------------------------------------|:--------------------------------|:------------------------------------------------------------------------------------------| :--- |
+| `J<Ref, Data>`                          | `LEFT JOIN`                     | Fetches an array of targets that possess the requested `Data`.                            | Keeps the root entity, returns an empty `Vec`. |
+| `J<Ref, Option<Data>>`                  | `LEFT JOIN`                     | Fetches an array of all targets, wrapping missing data in `None`.                         | Keeps the root entity, returns an empty `Vec`. |
+| `JF<Ref, Data>`                         | `INNER JOIN` (First Match)      | Fetches only the first target that possesses the requested `Data`.                        | Filters out the root entity from the query. |
+| `JC<Ref, Filter>`                       | `WHERE EXISTS`                  | Evaluates a condition against targets without fetching their data.                        | Filters out the root entity from the query. |
+| `J<Ref, Data>` + `JC<Ref, Filter>`      | `LEFT JOIN` + `WHERE EXISTS`    | Fetches **all** matches as a `Vec`, requires $\ge 1$ match but only applies `JC` to root. | Filters out the root entity from the query. |
+| `J<Ref, (Data, &C)>` + `JC<Ref, With<C>>`| `INNER JOIN` (1-to-Many)        | Fetches a `Vec` of strictly matching targets, and requires $\ge 1$ match.                 | Filters out the root entity from the query. |
 
 > [!TIP]
 > **Understanding 1-to-Many Joins:** 
