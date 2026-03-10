@@ -130,7 +130,7 @@ fn combined_filter(
         JC<InventoryItems, With<Legendary>>
     >
 ) {
-    // Only legendary owners enter, and they only see their legendary items.
+    // Only legendary item owners enter, and they only see their legendary items.
 }
 ```
 
