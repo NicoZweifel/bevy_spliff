@@ -327,7 +327,7 @@ These are enabled by default.
 ## Notes / TODOs
 
 - Mutable access on `Joined` would be great, rn it's `ReadOnlyQueryData` for `Joined`.
-- Use [`NestedQuery`](https://github.com/bevyengine/bevy/pull/21557), which should also solve mutability for `Joined`. Might help with access/filtering and cleaning up traits.
+- Use [`NestedQuery`](https://github.com/bevyengine/bevy/pull/21557), which should also partly solve mutability for `Joined`. Might help with access/filtering and cleaning up traits.
 - Cleanup `WorldQuery`/`QueryData` implementations with e.g. generic `JoinQuery` implementations.
 - Depends on `bevy_ecs` only.
 - More test cases and organizing suites.
