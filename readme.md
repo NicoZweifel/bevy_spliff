@@ -191,13 +191,13 @@ If you are coming from a relational database background, here is how `bevy_splif
 
 Because Bevy queries do not duplicate the "Root" entity for multiple matches (unlike standard SQL joins), `bevy_spliff` uses a combination of Data and Filters to achieve relational results:
 
-| `bevy_spliff`              | SQL Equivalent                                            | Behavior | Empty/Broken List Behavior |
-|:---------------------------|:----------------------------------------------------------| :--- | :--- |
-| **`J<Ref, Data>`** | `LEFT JOIN target WHERE target.Data IS NOT NULL`          | Fetches targets that have `D`. | Keeps the root entity, returns an empty `Vec`. |
-| **`J<Ref, Option<Data>>`** | `LEFT JOIN target`                                        | Fetches all targets, wrapping data in `Option`. | Keeps the root entity, returns an empty `Vec`. |
-| **`JF<Ref, Data>`** | `INNER JOIN target WHERE target.Data IS NOT NULL` | Fetches the first target that has `D`. | Filters out the root entity from the query. |
-| **`JC<Ref, Filter>`** | `WHERE EXISTS (SELECT 1 FROM target WHERE F)`             | Strict filter condition on the entire row without fetching data. | Filters out the root entity from the query. |
-| **`J` + `JC`** | `INNER JOIN target` (1-to-Many)                           | Fetches all matches as a `Vec`, strictly requires at least one target to pass `JC`. | Filters out the root entity from the query. |
+| `bevy_spliff`          | SQL Equivalent                                            | Behavior | Empty/Broken List Behavior |
+|:-----------------------|:----------------------------------------------------------| :--- | :--- |
+| `J<Ref, Data>`         | `LEFT JOIN target WHERE target.Data IS NOT NULL`          | Fetches targets that have `D`. | Keeps the root entity, returns an empty `Vec`. |
+| `J<Ref, Option<Data>>` | `LEFT JOIN target`                                        | Fetches all targets, wrapping data in `Option`. | Keeps the root entity, returns an empty `Vec`. |
+| `JF<Ref, Data>`        | `INNER JOIN target WHERE target.Data IS NOT NULL` | Fetches the first target that has `D`. | Filters out the root entity from the query. |
+| `JC<Ref, Filter>`      | `WHERE EXISTS (SELECT 1 FROM target WHERE F)`             | Strict filter condition on the entire row without fetching data. | Filters out the root entity from the query. |
+| `J` + `JC`             | `INNER JOIN target` (1-to-Many)                           | Fetches all matches as a `Vec`, strictly requires at least one target to pass `JC`. | Filters out the root entity from the query. |
 
 > [!TIP]
 > For a standard Inner Join, **`JF`** is usually your best option. However, if you need a **1-to-Many Inner Join** (fetching all matching targets but skipping root entities that have zero matches), combine `J<Ref, Data>` in your query data with `JC<Ref, Filter>` in your query filter.
@@ -223,7 +223,7 @@ Choosing between `J`, `JF`, and `JC` comes down to **Optionality** (do they *nee
 These are enabled by default.
 
 - `type-aliases`: Enables shorthand names like J, JF, and JC.
-- `derive`: Enables the #[derive(Joinable)] macro.
+- `derive`: Enables the `#[derive(Joinable)]` macro.
 
 ## Notes / TODOs
 
