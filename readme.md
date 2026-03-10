@@ -3,8 +3,7 @@
 [![Crates.io](https://img.shields.io/crates/v/bevy_spliff.svg)](https://crates.io/crates/bevy_spliff)
 [![Downloads](https://img.shields.io/crates/d/bevy_spliff.svg)](https://crates.io/crates/bevy_spliff)
 [![Docs](https://docs.rs/bevy_spliff/badge.svg)](https://docs.rs/bevy_spliff/)
-[![CI](https://github.com/nicozweifel/bevy_spliff/workflows/ci/badge.svg?branch=dev)](https://github.com/NicoZweifel/bevy_spliff/actions)
-
+[![CI](https://github.com/NicoZweifel/bevy_spliff/actions/workflows/ci.yaml/badge.svg?branch=dev)](https://github.com/NicoZweifel/bevy_spliff/actions/workflows/ci.yaml)
 
 A crate for doing joins in bevy.
 
