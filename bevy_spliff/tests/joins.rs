@@ -295,7 +295,7 @@ fn joined_first_component_should_filter() {
 }
 
 #[test]
-fn joined_first_filtered_should_filter() {
+fn joined_first_filter_condition_should_filter() {
     // Arrange
     let mut world = World::new();
 
@@ -368,7 +368,7 @@ fn joined_first_empty_should_filter_out_root() {
 }
 
 #[test]
-fn joined_first_deeply_nested_filtered_should_return() {
+fn joined_first_deeply_nested_filter_condition_should_return() {
     // Arrange
     let mut world = World::new();
 
