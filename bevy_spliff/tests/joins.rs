@@ -216,7 +216,7 @@ fn joined_should_yield_empty() {
 }
 
 #[test]
-fn joined_resilience_to_despawned_targets() {
+fn joined_should_handle_despawned_targets() {
     // Arrange
     let mut world = World::new();
 
