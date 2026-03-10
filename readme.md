@@ -18,16 +18,16 @@ Just add the dependency.
 cargo add bevy_spliff
 ```
 
-And the `Joinable` derive macro:
+And the `Joinable` derive macro to your relations, e.g.:
 
 ```rust
 #[derive(Component, Joinable, Default)]
-#[relationship_target(relationship = InInventory)]
-struct Inventory(Vec<Entity>);
+#[relationship_target(relationship = InventoryItemOf)]
+struct InventoryItems(Vec<Entity>);
 
 #[derive(Component, Joinable)]
-#[relationship(relationship_target = Inventory)]
-struct InInventory(pub Entity);
+#[relationship(relationship_target = InventoryItems)]
+struct InventoryItemOf(pub Entity);
 
 #[derive(Component, Joinable, Default)]
 #[relationship_target(relationship = WeaponOf)]
@@ -38,12 +38,12 @@ struct Weapons(Vec<Entity>);
 struct WeaponOf(pub Entity);
 
 #[derive(Component, Joinable, Default)]
-#[relationship_target(relationship = InStorage)]
-struct Storage(Vec<Entity>);
+#[relationship_target(relationship = StorageItemOf)]
+struct StorageItems(Vec<Entity>);
 
 #[derive(Component, Joinable)]
-#[relationship(relationship_target = Storage)]
-struct InStorage(pub Entity);
+#[relationship(relationship_target = StorageItems)]
+struct StorageItemOf(pub Entity);
 ```
 
 ### Usage
@@ -53,7 +53,7 @@ currently this would look sth like this:
 
 ```rust
 fn manual_system(
-    q_characters: Query<(&Name, &Inventory), With<Character>>,
+    q_characters: Query<(&Name, &InventoryItems), With<Character>>,
     q_items: Query<&Name, With<Legendary>>,
 ) {
     for (name, inventory) in &q_characters {
@@ -71,8 +71,8 @@ This simplifies to:
 ```rust
 fn joined_system(
     q: Query<
-        (&Name, Joined<Inventory, &Name>),
-        (With<Character>, JoinCondition<Inventory, With<Legendary>>),
+        (&Name, Joined<InventoryItems, &Name>),
+        (With<Character>, JoinCondition<InventoryItems, With<Legendary>>),
     >,
 ) {
     for (name, item_names) in &q {
@@ -86,7 +86,7 @@ Or just this if you don't need to use a nested filter condition:
 ```rust
 fn simple_joined_system(
     q: Query<
-        (&Name, Joined<Inventory, &Name>),
+        (&Name, Joined<InventoryItems, &Name>),
         With<Character>,
     >,
 ) {
@@ -111,39 +111,67 @@ fn aliased_joined_system(
 }
 ```
 
-This also works for deeply nested relational queries:
+This also works for deeply nested relational queries, e.g. the entity has a "Vault" containing a "Backpack" with legendary weapons:
 
 ```rust
 fn deeply_nested_joined_system(
     q: Query<
-        (&Name, J<Inventory, (&Name, J<Weapons, &Name>)>),
-        (With<Character>, JC<Inventory, JC<Weapons, With<Legendary>>>),
+        (
+            &Name,
+            J<
+                StorageItems,
+                (
+                    &Name,
+                    J<InventoryItems, (&Name, J<Weapons, (&Name, &Legendary)>)>,
+                ),
+            >,
+        ),
+        (
+            With<Character>,
+            JC<StorageItems, JC<InventoryItems, JC<Weapons, With<Legendary>>>>,
+        ),
     >,
 ) {
-    for (name, inventories) in &q {
-        for (inventory_name, weapon_names) in inventories {
-            println!(
-                "Character {:?} with inventory {:?} has legendary weapons: {:?}",
-                name, inventory_name, weapon_names
-            );
+    for (character_name, storages) in &q {
+        for (storage_name, inventories) in storages {
+            for (inventory_name, weapons) in inventories {
+                let weapon_names: Vec<&Name> = weapons.iter().map(|(n, _)| n).collect();
+                println!(
+                    "{:?} has a {:?} containing a {:?} with legendary weapons: {:?}",
+                    character_name, storage_name, inventory_name, weapon_names
+                );
+            }
         }
     }
 }
 ```
 
-You can also use `JoinedFirst` or `JF` to inner join on the first match.
+You can also use `JoinedFirst` or `JF` to inner join on the first match, e.g.,
+each entity has a "Vault" containing a "Backpack" and the first legendary weapon found it finds.
 
 ```rust
 fn deeply_nested_joined_first_system(
     q: Query<
-        (&Name, JF<Inventory, (&Name, JF<Weapons, &Name>)>),
-        (With<Character>, JC<Inventory, JC<Weapons, With<Legendary>>>),
+        (
+            &Name,
+            JF<
+                StorageItems,
+                (
+                    &Name,
+                    JF<InventoryItems, (&Name, JF<Weapons, (&Name, &Legendary)>)>,
+                ),
+            >,
+        ),
+        (
+            With<Character>,
+            JC<StorageItems, JC<InventoryItems, JC<Weapons, With<Legendary>>>>,
+        ),
     >,
 ) {
-    for (name, (inventory_name, weapon_name)) in &q {
+    for (character_name, (storage_name, (inventory_name, (weapon_name, _)))) in &q {
         println!(
-            "Character {:?} with inventory {:?} has legendary weapon: {:?}",
-            name, inventory_name, weapon_name
+            "{:?} has a {:?} containing a {:?} with legendary weapon: {:?}",
+            character_name, storage_name, inventory_name, weapon_name
         );
     }
 }
@@ -156,13 +184,13 @@ This might resolve warnings/readability issues and allows you to provide descrip
 #[derive(QueryData)]
 pub struct CharacterItemQueryData {
     name: &'static Name,
-    items: J<Inventory, &'static Name>,
+    items: J<InventoryItems, &'static Name>,
 }
 
 #[derive(QueryFilter)]
 pub struct CharacterItemFilter {
     _is_character: With<Character>,
-    _has_legendary: JC<Inventory, With<Legendary>>,
+    _has_legendary: JC<InventoryItems, With<Legendary>>,
 }
 
 fn complex_joined_system(query: Query<CharacterItemQueryData, CharacterItemFilter>) {
@@ -178,15 +206,15 @@ fn complex_joined_system(query: Query<CharacterItemQueryData, CharacterItemFilte
 
 ## Overview
 
-| Feature              | Type Alias        | Description | Example Usage |
-|----------------------|-------------------| --- | --- |
-| **Joined**           | `J<Ref, Data>`    | Fetches data from all valid targets. Returns `Vec` or `Option` based on the mapper. | `J<Weapons, &Name>` |
-| **Joined First**     | `JF<Ref, Data>`   | Traverses a relationship and returns only the first target that matches the query data. | `JF<Armors, &Name>` |
+| Feature              | Type Alias        | Description | Example Usage                  |
+|----------------------|-------------------| --- |--------------------------------|
+| **Joined**           | `J<Ref, Data>`    | Fetches data from all valid targets. Returns `Vec` or `Option` based on the mapper. | `J<Weapons, &Name>`            |
+| **Joined First**     | `JF<Ref, Data>`   | Traverses a relationship and returns only the first target that matches the query data. | `JF<Weapons, &Name>`           |
 | **Join Condition**   | `JC<Ref, Filter>` | A query filter that checks if any target of a relationship satisfies a specific condition. | `JC<Weapons, With<Legendary>>` |
-| **Derive Macro**     | `Joinable`        | Automatically implements the `Joinable` trait for structs containing an `Entity` or `Vec<Entity>`. | `#[derive(Joinable)]` |
-| **Deep Nesting**     | N/A               | Supports recursive joins (joining on a joined result) for complex hierarchy traversals. | `J<A, (Data, J<B, Data>)>` |
-| **Built-in Support** | N/A               | Native support for standard Bevy hierarchy components like `Children` and `ChildOf`. | `J<Children, &Name>` |
-| **Change Detection** | N/A               | Integrates with Bevy's change detection within the join filters. | `JC<R, Changed<T>>` |
+| **Derive Macro**     | `Joinable`        | Automatically implements the `Joinable` trait for structs containing an `Entity` or `Vec<Entity>`. | `#[derive(Joinable)]`          |
+| **Deep Nesting**     | N/A               | Supports recursive joins (joining on a joined result) for complex hierarchy traversals. | `J<A, (Data, J<B, Data>)>`     |
+| **Built-in Support** | N/A               | Native support for standard Bevy hierarchy components like `Children` and `ChildOf`. | `J<Children, &Name>`           |
+| **Change Detection** | N/A               | Integrates with Bevy's change detection within the join filters. | `JC<R, Changed<T>>`            |
 
 ### Key Definitions
 
@@ -211,10 +239,13 @@ Because Bevy queries do not duplicate the "Root" entity for multiple matches (un
 
 > [!TIP]
 > **Understanding 1-to-Many Joins:** 
-> By default, combining `J` with `JC` acts as an existence check: if *any* target passes `JC`, the `J` fetcher eagerly fetches **all** targets matching its `QueryData`.
+> By default, combining `J` with `JC` acts as an existence check: if *any* target passes `JC`, 
+> the `J` fetcher eagerly fetches **all** targets matching its `QueryData`.
 > 
-> To create a strict **1-to-Many Inner Join** (where the resulting `Vec` only contains specific targets, e.g.,
-> only Legendary items), simply require that component in your `Data` tuple: `J<Weapons, (&Name, &Legendary)>`.
+> To create a strict 1-to-Many Inner Join (where the resulting Vec only contains specific targets, 
+> AND the root entity is skipped if there are zero matches), 
+> require the component in your Data tuple and include JC in your query filter:
+> `Query<(&Name, J<Weapons, (&Name, &Legendary)>), JC<Weapons, With<Legendary>>>`
 > 
 > You can also use `Has` to filter in the system body, if desired.
 
