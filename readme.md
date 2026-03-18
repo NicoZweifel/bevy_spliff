@@ -114,7 +114,7 @@ fn loose_filter(
 
 #### The "Strict" Filter
 
-To filter the joined results (the `Vec` or `Option`) so it only contains items matching your criteria, include the filter in the `Query Data`.
+To filter the join results (the `Vec` or `Option`) so it only contains items matching your criteria, include the filter in the `Query Data`.
 
 ```rust
 fn strict_filter(
@@ -268,7 +268,7 @@ fn cleaned_up_system(q: Query<DeepCharacterData, CharacterFilter>) {
 | **Join First**     | `JF<Ref, Data>`   | Traverses a relationship and returns only the first target that matches the query data.                                                                                 | `JF<Weapons, &Name>`           |
 | **Join Condition**   | `JC<Ref, Filter>` | A query filter that checks if any target of a relationship satisfies a specific condition.                                                                              | `JC<Weapons, With<Legendary>>` |
 | **Derive Macro**     | `Joinable`        | Automatically implements the `Joinable` trait for structs containing an `Entity` or `Vec<Entity>`.                                                                      | `#[derive(Joinable)]`          |
-| **Deep Nesting**     | N/A               | Supports recursive joins (joining on a joined result) for complex hierarchy traversals.                                                                                 | `J<A, (Data, J<B, Data>)>`     |
+| **Deep Nesting**     | N/A               | Supports recursive joins (joining on a join result) for complex hierarchy traversals.                                                                                 | `J<A, (Data, J<B, Data>)>`     |
 | **Built-in Support** | N/A               | Native support for standard Bevy hierarchy components like `Children` and `ChildOf`.                                                                                    | `J<Children, &Name>`           |
 | **Change Detection** | N/A               | Integrates with Bevy's change detection within the join filters.                                                                                                        | `JC<R, Changed<T>>`            |
 

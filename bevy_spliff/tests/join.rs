@@ -5,7 +5,7 @@ mod common;
 use common::*;
 
 #[test]
-fn joined_one_to_many_should_yield_all() {
+fn join_one_to_many_should_yield_all() {
     // Arrange
     let mut world = World::new();
     world.spawn((
@@ -32,7 +32,7 @@ fn joined_one_to_many_should_yield_all() {
 }
 
 #[test]
-fn joined_deeply_nested_should_yield_single() {
+fn join_deeply_nested_should_yield_single() {
     // Arrange
     let mut world = World::new();
     world.spawn((
@@ -75,7 +75,7 @@ fn joined_deeply_nested_should_yield_single() {
 }
 
 #[test]
-fn joined_deeply_nested_filtered_should_yield_single() {
+fn join_deeply_nested_filtered_should_yield_single() {
     // Arrange
     let mut world = World::new();
     world.spawn((
@@ -115,7 +115,7 @@ fn joined_deeply_nested_filtered_should_yield_single() {
 }
 
 #[test]
-fn joined_deeply_nested_filtered_should_yield_all() {
+fn join_deeply_nested_filtered_should_yield_all() {
     // Arrange
     let mut world = World::new();
     world.spawn((
@@ -154,7 +154,7 @@ fn joined_deeply_nested_filtered_should_yield_all() {
 }
 
 #[test]
-fn joined_empty_should_skip_and_yield_valid() {
+fn join_empty_should_skip_and_yield_valid() {
     // Arrange
     let mut world = World::new();
     let valid = world.spawn(Name::new(VALID_NAME)).id();
@@ -173,7 +173,7 @@ fn joined_empty_should_skip_and_yield_valid() {
 }
 
 #[test]
-fn joined_with_despawned_target_should_skip() {
+fn join_with_despawned_target_should_skip() {
     // Arrange
     let mut world = World::new();
     let e = world.spawn(Name::new(GHOST_NAME)).id();
@@ -192,7 +192,7 @@ fn joined_with_despawned_target_should_skip() {
 }
 
 #[test]
-fn joined_children_should_yield_all() {
+fn join_children_should_yield_all() {
     // Arrange
     let mut world = World::new();
     world.spawn((
@@ -218,7 +218,7 @@ fn joined_children_should_yield_all() {
 }
 
 #[test]
-fn joined_should_yield_empty() {
+fn join_should_yield_empty() {
     // Arrange
     let mut world = World::new();
     world.spawn(InventoryItems::default());
@@ -235,7 +235,7 @@ fn joined_should_yield_empty() {
 }
 
 #[test]
-fn joined_with_optional_data_should_yield_none_for_missing() {
+fn join_with_optional_data_should_yield_none_for_missing() {
     // Arrange
     let mut world = World::new();
     world.spawn((

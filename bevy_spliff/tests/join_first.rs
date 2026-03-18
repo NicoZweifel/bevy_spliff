@@ -5,7 +5,7 @@ mod common;
 use common::*;
 
 #[test]
-fn joined_first_should_filter() {
+fn join_first_should_filter() {
     // Arrange
     let mut world = World::new();
     world.spawn((Character, related!(InventoryItems[Name::new(ITEM_NAME)])));
@@ -24,7 +24,7 @@ fn joined_first_should_filter() {
 }
 
 #[test]
-fn joined_first_component_should_filter() {
+fn join_first_component_should_filter() {
     // Arrange
     let mut world = World::new();
     world.spawn((Character, related!(InventoryItems[Name::new(ITEM_NAME)])));
@@ -47,7 +47,7 @@ fn joined_first_component_should_filter() {
 }
 
 #[test]
-fn joined_first_empty_should_filter_out_root() {
+fn join_first_empty_should_filter_out_root() {
     // Arrange
     let mut world = World::new();
     world.spawn((Name::new(UNARMED_NAME), InventoryItems::default()));
@@ -63,7 +63,7 @@ fn joined_first_empty_should_filter_out_root() {
 }
 
 #[test]
-fn joined_first_should_skip_invalid_targets_and_yield_first_valid() {
+fn join_first_should_skip_invalid_targets_and_yield_first_valid() {
     // Arrange
     let mut world = World::new();
     world.spawn((
@@ -89,7 +89,7 @@ fn joined_first_should_skip_invalid_targets_and_yield_first_valid() {
 }
 
 #[test]
-fn joined_first_deeply_nested_filtered_should_yield_single_match() {
+fn join_first_deeply_nested_filtered_should_yield_single_match() {
     // Arrange
     let mut world = World::new();
     world.spawn((
@@ -126,7 +126,7 @@ fn joined_first_deeply_nested_filtered_should_yield_single_match() {
 }
 
 #[test]
-fn joined_first_deeply_nested_filtered_should_yield_all() {
+fn join_first_deeply_nested_filtered_should_yield_all() {
     // Arrange
     let mut world = World::new();
     world.spawn((
