@@ -173,11 +173,11 @@ fn join_empty_should_skip_and_yield_valid() {
 }
 
 #[test]
-fn join_with_despawned_target_should_skip() {
+fn joined_with_despawned_target_should_skip() {
     // Arrange
     let mut world = World::new();
     let e = world.spawn(Name::new(GHOST_NAME)).id();
-    world.spawn(InventoryItems::default());
+    world.spawn(InventoryItems::new(vec![e]));
     world.despawn(e);
 
     // Act
