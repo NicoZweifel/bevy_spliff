@@ -35,7 +35,7 @@ jobs:
           shared-key: "ci"
       - &rust_toolchain
         name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561
+        uses: dtolnay/rust-toolchain@c19371144df3bb44fab255c43d04cbc2ab54d1c4
         with:
           toolchain: stable
       - &install-deps
@@ -53,7 +53,7 @@ jobs:
       - *checkout
       - *cache
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561
+        uses: dtolnay/rust-toolchain@c19371144df3bb44fab255c43d04cbc2ab54d1c4
         with:
           toolchain: stable
           components: clippy
@@ -82,7 +82,7 @@ jobs:
     steps:
       - *checkout
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561
+        uses: dtolnay/rust-toolchain@c19371144df3bb44fab255c43d04cbc2ab54d1c4
         with:
           toolchain: stable
           components: rustfmt
