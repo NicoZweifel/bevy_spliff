@@ -4,10 +4,10 @@ on:
   pull_request:
     branches: [main, dev]
     paths:
-      - '**.rs'
-      - '**/Cargo.toml'
-      - '**/Cargo.lock'
-      - '.github/workflows/ci.yaml'
+      - "**.rs"
+      - "**/Cargo.toml"
+      - "**/Cargo.lock"
+      - ".github/workflows/ci.yaml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -30,10 +30,11 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
       - &cache
         name: Rust Cache
-        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
         with:
           shared-key: "ci"
-      - name: Install Rust toolchain
+      - &rust_toolchain
+        name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561
         with:
           toolchain: stable
@@ -59,6 +60,19 @@ jobs:
       - *install-deps
       - name: Run clippy
         run: cargo clippy -- -D warnings
+
+  # Run cargo bench
+  bench:
+    name: Bench
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - *checkout
+      - *cache
+      - *rust_toolchain
+      - *install-deps
+      - name: Run cargo bench
+        run: cargo bench
 
   # Run cargo fmt --all -- --check
   format:
