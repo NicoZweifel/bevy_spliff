@@ -12,7 +12,7 @@ use bevy_ecs::{
     world::unsafe_world_cell::UnsafeWorldCell,
 };
 
-unsafe impl<Ref, Data, Filter> WorldQuery for Joined<Ref, Data, Filter>
+unsafe impl<Ref, Data, Filter> WorldQuery for Join<Ref, Data, Filter>
 where
     Ref: Joinable + Component,
     Data: ReadOnlyQueryData + 'static,

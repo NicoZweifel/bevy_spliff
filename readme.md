@@ -80,12 +80,12 @@ fn join_system(q: Query<(&Name, J<InventoryItems, &Name>), With<Character>>) {
 ```
 
 > [!NOTE]
-> By default, `Joined<R, D>` (or `J<R, D>`) fetches all related entities. If none exist,
+> By default, `Join<R, D>` (or `J<R, D>`) fetches all related entities. If none exist,
 > it returns an empty `Vec` or `None` but does not skip the root entity.
 
 ### Join First
 
-`JoinedFirst<R, D>` (or `JF<R, D>`) fetches the first valid target. If no target satisfies the data requirements, the root entity is skipped.
+`JoinFirst<R, D>` (or `JF<R, D>`) fetches the first valid target. If no target satisfies the data requirements, the root entity is skipped.
 
 ```rust
 fn join_first_system(q: Query<(&Name, JF<InventoryItems, (&Name, &Legendary)>), With<Character>>) {
@@ -144,7 +144,7 @@ fn combined_filter(
 >
 > For `JF`: You will get the first item in the list, even if a later item was the one that satisfied the `JC`.
 >
-> To ensure your fetched data matches your filter, always include the relevant component/filter in the `Joined` or `JoinedFirst` type.
+> To ensure your fetched data matches your filter, always include the relevant component/filter in the `Join` or `JoinFirst` type.
 
 #### Visualizing the logic
 
@@ -264,8 +264,8 @@ fn cleaned_up_system(q: Query<DeepCharacterData, CharacterFilter>) {
 
 | Feature              | Type Alias        | Description                                                                                                                                                             | Example Usage                  |
 | -------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| **Joined**           | `J<Ref, Data>`    | Fetches a `Vec` or `Option` containing targets matching Data. If combined with `JC`, it eagerly fetches the full list as long as at least one target passes the filter. | `J<Weapons, &Name>`            |
-| **Joined First**     | `JF<Ref, Data>`   | Traverses a relationship and returns only the first target that matches the query data.                                                                                 | `JF<Weapons, &Name>`           |
+| **Join**           | `J<Ref, Data>`    | Fetches a `Vec` or `Option` containing targets matching Data. If combined with `JC`, it eagerly fetches the full list as long as at least one target passes the filter. | `J<Weapons, &Name>`            |
+| **Join First**     | `JF<Ref, Data>`   | Traverses a relationship and returns only the first target that matches the query data.                                                                                 | `JF<Weapons, &Name>`           |
 | **Join Condition**   | `JC<Ref, Filter>` | A query filter that checks if any target of a relationship satisfies a specific condition.                                                                              | `JC<Weapons, With<Legendary>>` |
 | **Derive Macro**     | `Joinable`        | Automatically implements the `Joinable` trait for structs containing an `Entity` or `Vec<Entity>`.                                                                      | `#[derive(Joinable)]`          |
 | **Deep Nesting**     | N/A               | Supports recursive joins (joining on a joined result) for complex hierarchy traversals.                                                                                 | `J<A, (Data, J<B, Data>)>`     |
@@ -330,12 +330,12 @@ These are enabled by default.
 
 ## Notes / TODOs
 
-- **Mutable access on `Joined`:** Currently, `Joined` only supports `ReadOnlyQueryData`. True mutable joins require careful handling to prevent mutable aliasing (i.e., multiple root entities yielding `&mut` access to the same target entity).
+- **Mutable access on `Join`:** Currently, `Join` only supports `ReadOnlyQueryData`. True mutable joins require careful handling to prevent mutable aliasing (i.e., multiple root entities yielding `&mut` access to the same target entity).
 - **Cleanup `WorldQuery`/`QueryData` Boilerplate:** Refactor the internal implementations for `J`, `JF`, and `JC` using generic `JoinQuery` implementations or macros to reduce duplicated code.
 - Depends on `bevy_ecs` only (and `syn` etc. if you use the macro).
 - More test cases and organizing suites.
 - Make sure this doesn't do something terribly wrong (should be fine though at this point).
-- Bevy's iteration order is nondeterministic. If you need stable sorting, use `Joined` (`J`) to get a `Vec` and sort it in the system body.
+- Bevy's iteration order is nondeterministic. If you need stable sorting, use `Join` (`J`) to get a `Vec` and sort it in the system body.
 - Docs.
 - More/better tests.
 

@@ -9,7 +9,7 @@ use bevy_ecs::{
 };
 use std::iter;
 
-unsafe impl<Ref, Data, Filter> IterQueryData for JoinedFirst<Ref, Data, Filter>
+unsafe impl<Ref, Data, Filter> IterQueryData for JoinFirst<Ref, Data, Filter>
 where
     Ref: Joinable + Component,
     Data: ReadOnlyQueryData + 'static,
@@ -17,8 +17,8 @@ where
 {
 }
 
-// SAFETY: JoinedFirst is read-only because Data is restricted to ReadOnlyQueryData
-unsafe impl<Ref, Data, Filter> ReadOnlyQueryData for JoinedFirst<Ref, Data, Filter>
+// SAFETY: JoinFirst is read-only because Data is restricted to ReadOnlyQueryData
+unsafe impl<Ref, Data, Filter> ReadOnlyQueryData for JoinFirst<Ref, Data, Filter>
 where
     Ref: Joinable + Component,
     Data: ReadOnlyQueryData + 'static,
@@ -26,7 +26,7 @@ where
 {
 }
 
-impl<Ref, Data, Filter> ArchetypeQueryData for JoinedFirst<Ref, Data, Filter>
+impl<Ref, Data, Filter> ArchetypeQueryData for JoinFirst<Ref, Data, Filter>
 where
     Ref: Joinable + Component,
     Data: ReadOnlyQueryData + 'static,
@@ -34,7 +34,7 @@ where
 {
 }
 
-unsafe impl<Ref, Data, Filter> QueryData for JoinedFirst<Ref, Data, Filter>
+unsafe impl<Ref, Data, Filter> QueryData for JoinFirst<Ref, Data, Filter>
 where
     Ref: Joinable + Component,
     Data: ReadOnlyQueryData + 'static,

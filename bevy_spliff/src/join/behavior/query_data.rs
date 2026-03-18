@@ -10,7 +10,7 @@ use bevy_ecs::{
     storage::TableRow,
 };
 
-unsafe impl<Ref, Data, Filter> IterQueryData for Joined<Ref, Data, Filter>
+unsafe impl<Ref, Data, Filter> IterQueryData for Join<Ref, Data, Filter>
 where
     Ref: Joinable + Component,
     Data: ReadOnlyQueryData + 'static,
@@ -18,8 +18,8 @@ where
 {
 }
 
-// SAFETY: Joined is read-only because Data is restricted to ReadOnlyQueryData
-unsafe impl<Ref, Data, Filter> ReadOnlyQueryData for Joined<Ref, Data, Filter>
+// SAFETY: Join is read-only because Data is restricted to ReadOnlyQueryData
+unsafe impl<Ref, Data, Filter> ReadOnlyQueryData for Join<Ref, Data, Filter>
 where
     Ref: Joinable + Component,
     Data: ReadOnlyQueryData + 'static,
@@ -27,7 +27,7 @@ where
 {
 }
 
-impl<Ref, Data, Filter> ArchetypeQueryData for Joined<Ref, Data, Filter>
+impl<Ref, Data, Filter> ArchetypeQueryData for Join<Ref, Data, Filter>
 where
     Ref: Joinable + Component,
     Data: ReadOnlyQueryData + 'static,
@@ -35,7 +35,7 @@ where
 {
 }
 
-unsafe impl<Ref, Data, Filter> QueryData for Joined<Ref, Data, Filter>
+unsafe impl<Ref, Data, Filter> QueryData for Join<Ref, Data, Filter>
 where
     Ref: Joinable + Component,
     Data: ReadOnlyQueryData + 'static,
