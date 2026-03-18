@@ -9,6 +9,4 @@ pub const GHOST_NAME: &str = "Ghost";
 pub const PARENT_NAME: &str = "Parent";
 pub const CHILD_1_NAME: &str = "Child 1";
 pub const CHILD_2_NAME: &str = "Child 2";
-pub const EMPTY_NAME: &str = "Empty";
-pub const UNARMED_NAME: &str = "Unarmed";
 pub const CONTAINER_NAME: &str = "Container";

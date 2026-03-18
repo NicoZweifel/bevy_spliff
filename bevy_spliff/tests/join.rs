@@ -5,7 +5,7 @@ mod common;
 use common::*;
 
 #[test]
-fn join_one_to_many_should_yield_all() {
+fn join_should_yield_all() {
     // Arrange
     let mut world = World::new();
     world.spawn((
@@ -32,7 +32,32 @@ fn join_one_to_many_should_yield_all() {
 }
 
 #[test]
-fn join_deeply_nested_should_yield_single() {
+fn join_should_yield_all_children() {
+    // Arrange
+    let mut world = World::new();
+    world.spawn((
+        Name::new(PARENT_NAME),
+        related!(Children[
+            Name::new(CHILD_1_NAME),
+            Name::new(CHILD_2_NAME),
+        ]),
+    ));
+
+    // Act
+    let res: Vec<Vec<&Name>> = world
+        .query_filtered::<J<Children, &Name>, With<Children>>()
+        .iter(&world)
+        .collect();
+
+    // Assert
+    assert_eq!(res.len(), 1);
+    assert_eq!(res[0].len(), 2);
+    assert_eq!(res[0][0].as_str(), CHILD_1_NAME);
+    assert_eq!(res[0][1].as_str(), CHILD_2_NAME);
+}
+
+#[test]
+fn join_should_yield_deeply_nested_single() {
     // Arrange
     let mut world = World::new();
     world.spawn((
@@ -75,7 +100,7 @@ fn join_deeply_nested_should_yield_single() {
 }
 
 #[test]
-fn join_deeply_nested_filtered_should_yield_single() {
+fn join_should_yield_deeply_nested_filtered() {
     // Arrange
     let mut world = World::new();
     world.spawn((
@@ -115,7 +140,7 @@ fn join_deeply_nested_filtered_should_yield_single() {
 }
 
 #[test]
-fn join_deeply_nested_filtered_should_yield_all() {
+fn join_should_yield_all_deeply_nested_filtered() {
     // Arrange
     let mut world = World::new();
     world.spawn((
@@ -154,7 +179,7 @@ fn join_deeply_nested_filtered_should_yield_all() {
 }
 
 #[test]
-fn join_empty_should_skip_and_yield_valid() {
+fn join_should_skip_empty_and_yield_valid() {
     // Arrange
     let mut world = World::new();
     let valid = world.spawn(Name::new(VALID_NAME)).id();
@@ -173,7 +198,7 @@ fn join_empty_should_skip_and_yield_valid() {
 }
 
 #[test]
-fn join_with_despawned_target_should_skip() {
+fn join_should_skip_despawned() {
     // Arrange
     let mut world = World::new();
     let e = world.spawn(Name::new(GHOST_NAME)).id();
@@ -189,32 +214,6 @@ fn join_with_despawned_target_should_skip() {
     // Assert
     assert_eq!(res.len(), 1);
     assert!(res[0].is_empty());
-}
-
-#[test]
-fn join_children_should_yield_all() {
-    // Arrange
-    let mut world = World::new();
-    world.spawn((
-        Name::new(PARENT_NAME),
-        related!(Children[
-            Name::new(CHILD_1_NAME),
-            Name::new(CHILD_2_NAME),
-        ]),
-    ));
-
-    // Act
-    let res: Vec<Vec<&Name>> = world
-        .query_filtered::<J<Children, &Name>, With<Children>>()
-        .iter(&world)
-        .collect();
-
-    // Assert
-    assert_eq!(res.len(), 1);
-    assert_eq!(res[0].len(), 2);
-    let joined_names: Vec<&str> = res[0].iter().map(|n| n.as_str()).collect();
-    assert!(joined_names.contains(&CHILD_1_NAME));
-    assert!(joined_names.contains(&CHILD_2_NAME));
 }
 
 #[test]
@@ -235,7 +234,7 @@ fn join_should_yield_empty() {
 }
 
 #[test]
-fn join_with_optional_data_should_yield_none_for_missing() {
+fn join_optional_should_yield_none() {
     // Arrange
     let mut world = World::new();
     world.spawn((

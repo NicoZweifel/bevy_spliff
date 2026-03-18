@@ -30,7 +30,7 @@ fn join_condition_should_continue_searching() {
 fn join_condition_empty_should_yield_nothing() {
     // Arrange
     let mut world = World::new();
-    world.spawn((Name::new(EMPTY_NAME), InventoryItems::default()));
+    world.spawn((Character, InventoryItems::default()));
 
     // Act
     let res: Vec<Entity> = world
@@ -43,7 +43,7 @@ fn join_condition_empty_should_yield_nothing() {
 }
 
 #[test]
-fn join_condition_with_no_matches_should_filter_out_root() {
+fn join_condition_no_matches_should_filter_out_root() {
     // Arrange
     let mut world = World::new();
     world.spawn((

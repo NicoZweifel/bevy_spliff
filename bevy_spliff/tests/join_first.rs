@@ -50,11 +50,11 @@ fn join_first_component_should_filter() {
 fn join_first_empty_should_filter_out_root() {
     // Arrange
     let mut world = World::new();
-    world.spawn((Name::new(UNARMED_NAME), InventoryItems::default()));
+    world.spawn((Character, InventoryItems::default()));
 
     // Act
     let res: Vec<_> = world
-        .query::<JF<InventoryItems, &Name>>()
+        .query::<JF<InventoryItems, ()>>()
         .iter(&world)
         .collect();
 
@@ -161,4 +161,24 @@ fn join_first_deeply_nested_filtered_should_yield_all() {
     assert_eq!(weapon_names.len(), 2);
     assert!(weapon_names.contains(&LEGENDARY_NAME));
     assert!(weapon_names.contains(&WEAPON_NAME));
+}
+
+#[test]
+fn join_first_should_skip_despawned_and_yield() {
+    // Arrange
+    let mut world = World::new();
+    let ghost = world.spawn(Name::new(GHOST_NAME)).id();
+    let valid = world.spawn(Name::new(VALID_NAME)).id();
+    world.spawn(InventoryItems::new(vec![ghost, valid]));
+    world.despawn(ghost);
+
+    // Act
+    let res: Vec<&Name> = world
+        .query::<JF<InventoryItems, &Name>>()
+        .iter(&world)
+        .collect();
+
+    // Assert
+    assert_eq!(res.len(), 1);
+    assert_eq!(res[0].as_str(), VALID_NAME);
 }
