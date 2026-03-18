@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/NicoZweifel/bevy_spliff"
 
 [dependencies]
-bevy_ecs = "0.18.1"
+bevy_ecs = { version = "0.19.0-dev", git = "https://github.com/NicoZweifel/bevy", branch ="joins" }
 bevy_spliff_derive = { version = "0.1.2", path = "../bevy_spliff_derive", optional = true }
 
 [features]
@@ -15,3 +15,10 @@ default = ["derive", "type-aliases"]
 derive = ["dep:bevy_spliff_derive"]
 type-aliases = []
 
+
+[dev-dependencies]
+criterion = "0.7.0"
+
+[[bench]]
+name = "joins"
+harness = false

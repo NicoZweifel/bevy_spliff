@@ -1,51 +1,8 @@
 use bevy_ecs::{name::Name, prelude::*};
 use bevy_spliff::prelude::*;
 
-const PLAYER_NAME: &str = "Player";
-const ENEMY_NAME: &str = "Enemy";
-const ITEM_NAME: &str = "Item";
-const VAULT_NAME: &str = "Vault";
-const WEAPON_NAME: &str = "Sword";
-const LEGENDARY_NAME: &str = "Legendary";
-const VALID_NAME: &str = "Valid";
-const GHOST_NAME: &str = "Ghost";
-const PARENT_NAME: &str = "Parent";
-const CHILD_1_NAME: &str = "Child 1";
-const CHILD_2_NAME: &str = "Child 2";
-const EMPTY_NAME: &str = "Empty";
-const UNARMED_NAME: &str = "Unarmed";
-const CONTAINER_NAME: &str = "Container";
-
-#[derive(Component)]
-#[require(InventoryItems, StorageItems, Name::new(PLAYER_NAME))]
-struct Character;
-
-#[derive(Component)]
-struct Legendary;
-
-#[derive(Component, Joinable, Default)]
-#[relationship_target(relationship = StorageItemOf)]
-struct StorageItems(Vec<Entity>);
-
-#[derive(Component, Joinable)]
-#[relationship(relationship_target = StorageItems)]
-struct StorageItemOf(pub Entity);
-
-#[derive(Component, Joinable, Default)]
-#[relationship_target(relationship = InventoryItemOf)]
-struct InventoryItems(Vec<Entity>);
-
-#[derive(Component, Joinable)]
-#[relationship(relationship_target = InventoryItems)]
-struct InventoryItemOf(pub Entity);
-
-#[derive(Component, Joinable, Default)]
-#[relationship_target(relationship = WeaponOf)]
-struct Weapons(Vec<Entity>);
-
-#[derive(Component, Joinable)]
-#[relationship(relationship_target = Weapons)]
-struct WeaponOf(pub Entity);
+mod common;
+use common::*;
 
 #[test]
 fn joined_one_to_many_should_yield_all() {
@@ -60,14 +17,14 @@ fn joined_one_to_many_should_yield_all() {
     ));
 
     // Act
-    let results: Vec<_> = world
+    let res: Vec<_> = world
         .query_filtered::<(&Name, J<InventoryItems, &Name>), With<Character>>()
         .iter(&world)
         .collect();
 
     // Assert
-    assert_eq!(results.len(), 1);
-    let (player_name, item_names) = &results[0];
+    assert_eq!(res.len(), 1);
+    let (player_name, item_names) = &res[0];
     assert_eq!(player_name.as_str(), PLAYER_NAME);
     assert_eq!(item_names.len(), 2);
     assert_eq!(item_names[0].as_str(), ITEM_NAME);
@@ -103,11 +60,11 @@ fn joined_deeply_nested_should_yield_single() {
         With<Character>,
         JC<StorageItems, JC<InventoryItems, JC<Weapons, With<Legendary>>>>,
     )>();
-    let results = query.iter(&world).collect::<Vec<_>>();
+    let res = query.iter(&world).collect::<Vec<_>>();
 
     // Assert
-    assert_eq!(results.len(), 1);
-    let (player_name, storages) = &results[0];
+    assert_eq!(res.len(), 1);
+    let (player_name, storages) = &res[0];
     let (vault_name, inventories) = &storages[0];
     let (backpack_name, weapons) = &inventories[0];
     assert_eq!(player_name.as_str(), PLAYER_NAME);
@@ -277,7 +234,7 @@ fn joined_empty_should_skip_and_yield_valid() {
     let mut world = World::new();
     let valid = world.spawn(Name::new(VALID_NAME)).id();
     let invalid = world.spawn_empty().id();
-    world.spawn(InventoryItems(vec![valid, invalid]));
+    world.spawn(InventoryItems::new(vec![valid, invalid]));
 
     // Act
     let res: Vec<Vec<&Name>> = world
@@ -295,7 +252,7 @@ fn joined_with_despawned_target_should_skip() {
     // Arrange
     let mut world = World::new();
     let e = world.spawn(Name::new(GHOST_NAME)).id();
-    world.spawn(InventoryItems(vec![e]));
+    world.spawn(InventoryItems::default());
     world.despawn(e);
 
     // Act
@@ -339,7 +296,7 @@ fn joined_children_should_yield_all() {
 fn joined_should_yield_empty() {
     // Arrange
     let mut world = World::new();
-    world.spawn(InventoryItems(vec![]));
+    world.spawn(InventoryItems::default());
 
     // Act
     let res: Vec<_> = world
@@ -350,6 +307,32 @@ fn joined_should_yield_empty() {
     // Assert
     assert_eq!(res.len(), 1);
     assert!(res[0].is_empty());
+}
+
+#[test]
+fn joined_with_optional_data_should_yield_none_for_missing() {
+    // Arrange
+    let mut world = World::new();
+    world.spawn((
+        Character,
+        related!(InventoryItems[
+            (Name::new(LEGENDARY_NAME), Legendary),
+            Name::new(ITEM_NAME),
+        ]),
+    ));
+
+    // Act
+    let res: Vec<_> = world
+        .query::<J<InventoryItems, (&Name, Option<&Legendary>)>>()
+        .iter(&world)
+        .collect();
+
+    // Assert
+    assert_eq!(res.len(), 1);
+    let targets = &res[0];
+    assert_eq!(targets.len(), 2);
+    assert!(targets[0].1.is_some());
+    assert!(targets[1].1.is_none());
 }
 
 #[test]
@@ -398,7 +381,7 @@ fn joined_first_component_should_filter() {
 fn joined_first_empty_should_filter_out_root() {
     // Arrange
     let mut world = World::new();
-    world.spawn((Name::new(UNARMED_NAME), InventoryItems(vec![])));
+    world.spawn((Name::new(UNARMED_NAME), InventoryItems::default()));
 
     // Act
     let res: Vec<_> = world
@@ -408,6 +391,32 @@ fn joined_first_empty_should_filter_out_root() {
 
     // Assert
     assert!(res.is_empty());
+}
+
+#[test]
+fn joined_first_should_skip_invalid_targets_and_yield_first_valid() {
+    // Arrange
+    let mut world = World::new();
+    world.spawn((
+        Character,
+        related!(InventoryItems[
+            Name::new(ITEM_NAME),
+            (Name::new(LEGENDARY_NAME), Legendary),
+            (Name::new("Another"), Legendary),
+        ]),
+    ));
+
+    // Act
+    let res: Vec<_> = world
+        .query::<(&Name, JF<InventoryItems, (&Name, &Legendary)>)>()
+        .iter(&world)
+        .collect();
+
+    // Assert
+    assert_eq!(res.len(), 1);
+    let (player, (item_name, _)) = res[0];
+    assert_eq!(player.as_str(), PLAYER_NAME);
+    assert_eq!(item_name.as_str(), LEGENDARY_NAME);
 }
 
 #[test]
@@ -436,7 +445,7 @@ fn join_condition_should_continue_searching() {
 fn join_condition_empty_should_yield_nothing() {
     // Arrange
     let mut world = World::new();
-    world.spawn((Name::new(EMPTY_NAME), InventoryItems(vec![])));
+    world.spawn((Name::new(EMPTY_NAME), InventoryItems::default()));
 
     // Act
     let res: Vec<Entity> = world
@@ -447,3 +456,26 @@ fn join_condition_empty_should_yield_nothing() {
     // Assert
     assert!(res.is_empty());
 }
+
+#[test]
+fn join_condition_with_no_matches_should_filter_out_root() {
+    // Arrange
+    let mut world = World::new();
+    world.spawn((
+        Character,
+        related!(InventoryItems[
+            Name::new(ITEM_NAME),
+            Name::new(ITEM_NAME),
+        ]),
+    ));
+
+    // Act
+    let res: Vec<_> = world
+        .query_filtered::<Entity, JC<InventoryItems, With<Legendary>>>()
+        .iter(&world)
+        .collect();
+
+    // Assert
+    assert!(res.is_empty());
+}
+

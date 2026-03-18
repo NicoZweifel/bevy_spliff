@@ -1,4 +1,5 @@
 # bevy_spliff 💨
+
 [![License](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](https://github.com/NicoZweifel/bevy_spliff?tab=readme-ov-file#licensecreditsinspirationsreferences)
 [![Crates.io](https://img.shields.io/crates/v/bevy_spliff.svg)](https://crates.io/crates/bevy_spliff)
 [![Downloads](https://img.shields.io/crates/d/bevy_spliff.svg)](https://crates.io/crates/bevy_spliff)
@@ -48,7 +49,7 @@ struct StorageItemOf(pub Entity);
 
 ## Usage
 
-Imagine you are writing a system that needs to fetch nested data, 
+Imagine you are writing a system that needs to fetch nested data,
 currently this would look sth like this:
 
 ```rust
@@ -65,6 +66,7 @@ fn manual_system(
     }
 }
 ```
+
 ### Simple Join
 
 This simplifies to:
@@ -76,11 +78,12 @@ fn join_system(q: Query<(&Name, J<InventoryItems, &Name>), With<Character>>) {
     }
 }
 ```
+
 > [!NOTE]
 > By default, `Joined<R, D>` (or `J<R, D>`) fetches all related entities. If none exist,
 > it returns an empty `Vec` or `None` but does not skip the root entity.
 
-### Join First 
+### Join First
 
 `JoinedFirst<R, D>` (or `JF<R, D>`) fetches the first valid target. If no target satisfies the data requirements, the root entity is skipped.
 
@@ -96,9 +99,9 @@ fn join_first_system(q: Query<(&Name, JF<InventoryItems, (&Name, &Legendary)>), 
 
 You can control filtering at two levels. The following examples show how to progress from loose (root) to strict (nested) filtering.
 
-#### The "Loose" Filter 
+#### The "Loose" Filter
 
-Use `JoinCondition<R, F>` (or `JC<R, F>`) in your Query Filter. 
+Use `JoinCondition<R, F>` (or `JC<R, F>`) in your Query Filter.
 This ensures the root entity is only processed if at least one related entity satisfies the join condition.
 
 ```rust
@@ -126,7 +129,7 @@ fn strict_filter(
 ```rust
 fn combined_filter(
     q: Query<
-        (&Name, J<InventoryItems, (&Name, &Legendary)>), 
+        (&Name, J<InventoryItems, (&Name, &Legendary)>),
         JC<InventoryItems, With<Legendary>>
     >
 ) {
@@ -134,7 +137,7 @@ fn combined_filter(
 }
 ```
 
->[!IMPORTANT]
+> [!IMPORTANT]
 > If you use a `JC` filter but don't mirror that requirement in your `J` or `JF` data, you will get "unfiltered" results.
 >
 > For `J`: You will get a `Vec` containing all items, even if only one triggered the `JC`.
@@ -144,6 +147,7 @@ fn combined_filter(
 > To ensure your fetched data matches your filter, always include the relevant component/filter in the `Joined` or `JoinedFirst` type.
 
 #### Visualizing the logic
+
 ```mermaid
 graph TD
     subgraph World
@@ -166,7 +170,7 @@ graph TD
 
     C --> Filter
     Filter -- "Pass: JC Root Match" --> DataFetch
-    
+
     I1 -- "Data Filter: Skip" --> DataFetch
     I2 -- "Data Filter: Collect" --> DataFetch
 
@@ -176,7 +180,7 @@ graph TD
     style Filter fill:#fff,stroke:#333,stroke-width:2px
     style I2 fill:#f9f,stroke:#333
     style L fill:#f9f,stroke:#333
-``` 
+```
 
 ### Deep Nesting
 
@@ -187,7 +191,7 @@ graph LR
     subgraph "Filter Path (The Scout)"
         C_F[Character] -->|JC| V_F[Vault] -->|JC| B_F[Backpack] -->|With| W_F[Legendary]
     end
-    
+
     subgraph "Data Path (The Fetcher)"
         C_D[Character] ==>|J| V_D[Vault] ==>|J| B_D[Backpack] ==>|J| W_D[Name]
     end
@@ -223,9 +227,9 @@ for (character_name, storages) in &q {
 }
 ```
 
-### Readability 
+### Readability
 
-For complex systems with deeply nested fully filtered queries, you can use `J`, `JF`, and `JC` inside structs that derive QueryData or QueryFilter. 
+For complex systems with deeply nested fully filtered queries, you can use `J`, `JF`, and `JC` inside structs that derive QueryData or QueryFilter.
 This might resolve warnings/readability issues and allows you to provide descriptive names for your joined data:
 
 ```rust
@@ -259,7 +263,7 @@ fn cleaned_up_system(q: Query<DeepCharacterData, CharacterFilter>) {
 ## Overview
 
 | Feature              | Type Alias        | Description                                                                                                                                                             | Example Usage                  |
-|----------------------|-------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------|
+| -------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
 | **Joined**           | `J<Ref, Data>`    | Fetches a `Vec` or `Option` containing targets matching Data. If combined with `JC`, it eagerly fetches the full list as long as at least one target passes the filter. | `J<Weapons, &Name>`            |
 | **Joined First**     | `JF<Ref, Data>`   | Traverses a relationship and returns only the first target that matches the query data.                                                                                 | `JF<Weapons, &Name>`           |
 | **Join Condition**   | `JC<Ref, Filter>` | A query filter that checks if any target of a relationship satisfies a specific condition.                                                                              | `JC<Weapons, With<Legendary>>` |
@@ -270,52 +274,52 @@ fn cleaned_up_system(q: Query<DeepCharacterData, CharacterFilter>) {
 
 ### Key Definitions
 
-* `Ref`: A relational component implementing `Joinable` (e.g., a field containing a target `Entity`).
-* `Data`: The `QueryData` you wish to retrieve from the target entity.
-* `Filter`: A `QueryFilter` to validate the target entity without fetching data.
+- `Ref`: A relational component implementing `Joinable` (e.g., a field containing a target `Entity`).
+- `Data`: The `QueryData` you wish to retrieve from the target entity.
+- `Filter`: A `QueryFilter` to validate the target entity without fetching data.
 
 ## SQL Analogs
 
-If you are coming from a relational database background, here is how `bevy_spliff` types conceptually map to standard SQL operations. 
+If you are coming from a relational database background, here is how `bevy_spliff` types conceptually map to standard SQL operations.
 
 Because Bevy queries do not duplicate the "Root" entity for multiple matches (unlike standard SQL joins, which return multiple rows), `bevy_spliff` instead aggregates the targets into a `Vec`.
 
-| `bevy_spliff`                           | SQL Concept                     | Behavior                                                                                  | Empty/Broken List Behavior |
-|:----------------------------------------|:--------------------------------|:------------------------------------------------------------------------------------------| :--- |
-| `J<Ref, Data>`                          | `LEFT JOIN`                     | Fetches an array of targets that possess the requested `Data`.                            | Keeps the root entity, returns an empty `Vec`. |
-| `J<Ref, Option<Data>>`                  | `LEFT JOIN`                     | Fetches an array of all targets, wrapping missing data in `None`.                         | Keeps the root entity, returns an empty `Vec`. |
-| `JF<Ref, Data>`                         | `INNER JOIN` (First Match)      | Fetches only the first target that possesses the requested `Data`.                        | Filters out the root entity from the query. |
-| `JC<Ref, Filter>`                       | `WHERE EXISTS`                  | Evaluates a condition against targets without fetching their data.                        | Filters out the root entity from the query. |
-| `J<Ref, Data>` + `JC<Ref, Filter>`      | `LEFT JOIN` + `WHERE EXISTS`    | Fetches **all** matches as a `Vec`, requires $\ge 1$ match but only applies `JC` to root. | Filters out the root entity from the query. |
-| `J<Ref, (Data, &C)>` + `JC<Ref, With<C>>`| `INNER JOIN` (1-to-Many)        | Fetches a `Vec` of strictly matching targets, and requires $\ge 1$ match.                 | Filters out the root entity from the query. |
+| `bevy_spliff`                             | SQL Concept                  | Behavior                                                                                  | Empty/Broken List Behavior                     |
+| :---------------------------------------- | :--------------------------- | :---------------------------------------------------------------------------------------- | :--------------------------------------------- |
+| `J<Ref, Data>`                            | `LEFT JOIN`                  | Fetches an array of targets that possess the requested `Data`.                            | Keeps the root entity, returns an empty `Vec`. |
+| `J<Ref, Option<Data>>`                    | `LEFT JOIN`                  | Fetches an array of all targets, wrapping missing data in `None`.                         | Keeps the root entity, returns an empty `Vec`. |
+| `JF<Ref, Data>`                           | `INNER JOIN` (First Match)   | Fetches only the first target that possesses the requested `Data`.                        | Filters out the root entity from the query.    |
+| `JC<Ref, Filter>`                         | `WHERE EXISTS`               | Evaluates a condition against targets without fetching their data.                        | Filters out the root entity from the query.    |
+| `J<Ref, Data>` + `JC<Ref, Filter>`        | `LEFT JOIN` + `WHERE EXISTS` | Fetches **all** matches as a `Vec`, requires $\ge 1$ match but only applies `JC` to root. | Filters out the root entity from the query.    |
+| `J<Ref, (Data, &C)>` + `JC<Ref, With<C>>` | `INNER JOIN` (1-to-Many)     | Fetches a `Vec` of strictly matching targets, and requires $\ge 1$ match.                 | Filters out the root entity from the query.    |
 
 > [!TIP]
-> **Understanding 1-to-Many Joins:** 
-> By default, combining `J` with `JC` acts as an existence check: if *any* target passes `JC`, 
+> **Understanding 1-to-Many Joins:**
+> By default, combining `J` with `JC` acts as an existence check: if _any_ target passes `JC`,
 > the `J` fetcher eagerly fetches **all** targets matching its `QueryData`.
-> 
-> To create a strict 1-to-Many Inner Join (where the resulting Vec only contains specific targets, 
-> AND the root entity is skipped if there are zero matches), 
+>
+> To create a strict 1-to-Many Inner Join (where the resulting Vec only contains specific targets,
+> AND the root entity is skipped if there are zero matches),
 > require the component in your Data tuple and include `JC` in your query filter:
 > `Query<(&Name, J<Weapons, (&Name, &Legendary)>), JC<Weapons, With<Legendary>>>`
-> 
+>
 > You can also use `Has` to filter in the system body, if desired.
 
-## Okay... so when to use what then? 
+## Okay... so when to use what then?
 
-Choosing between `J`, `JF`, and `JC` comes down to **Optionality** (do they *need* to have it?) and **Multiplicity** (do you need *all* of them, or just *one*?).
+Choosing between `J`, `JF`, and `JC` comes down to **Optionality** (do they _need_ to have it?) and **Multiplicity** (do you need _all_ of them, or just _one_?).
 
-* **I need to process all related items.**
-  -> Use **`J`** (Returns a `Vec`). 
-  *Example: Calculating the total weight of a player's inventory.*
-* **I need one related item, but it's okay if they don't have any.**
+- **I need to process all related items.**
+  -> Use **`J`** (Returns a `Vec`).
+  _Example: Calculating the total weight of a player's inventory._
+- **I need one related item, but it's okay if they don't have any.**
   -> Use **`J`** (Returns an empty `Vec` or `Option` depending on the mapper).
-  *Example: Drawing a weapon icon on the UI. Unarmed players should still have their UI drawn, just with an empty weapon slot.*
-* **I need one related item, and the system should SKIP entities that don't have it.**
+  _Example: Drawing a weapon icon on the UI. Unarmed players should still have their UI drawn, just with an empty weapon slot._
+- **I need one related item, and the system should SKIP entities that don't have it.**
   -> Use **`JF`** (Returns the item directly, acts as an Inner Join).
-  *Example: A combat system. Players without an equipped weapon cannot attack and should be skipped by the system.*
-* **I don't need the data, I just care IF they have it.** Use **`JC`** (Acts as a Query Filter).
-  *Example: A healing system or for usage with marker components, e.g. you only want to query players that have a Health Potion in their inventory, but you don't need to read the data yet.*
+  _Example: A combat system. Players without an equipped weapon cannot attack and should be skipped by the system._
+- **I don't need the data, I just care IF they have it.** Use **`JC`** (Acts as a Query Filter).
+  _Example: A healing system or for usage with marker components, e.g. you only want to query players that have a Health Potion in their inventory, but you don't need to read the data yet._
 
 ## Feature Flags
 
@@ -326,22 +330,18 @@ These are enabled by default.
 
 ## Notes / TODOs
 
-- Mutable access on `Joined` would be great, rn it's `ReadOnlyQueryData` for `Joined`.
-- Use [`NestedQuery`](https://github.com/bevyengine/bevy/pull/21557), which should also partly solve mutability for `Joined`. Might help with access/filtering and cleaning up traits.
-- Cleanup `WorldQuery`/`QueryData` implementations with e.g. generic `JoinQuery` implementations.
-- Depends on `bevy_ecs` only.
+- **Mutable access on `Joined`:** Currently, `Joined` only supports `ReadOnlyQueryData`. True mutable joins require careful handling to prevent mutable aliasing (i.e., multiple root entities yielding `&mut` access to the same target entity).
+- **Cleanup `WorldQuery`/`QueryData` Boilerplate:** Refactor the internal implementations for `J`, `JF`, and `JC` using generic `JoinQuery` implementations or macros to reduce duplicated code.
+- Depends on `bevy_ecs` only (and `syn` etc. if you use the macro).
 - More test cases and organizing suites.
-- Make sure this doesn't do something terribly wrong.
-- Bevy's iteration order is nondeterministic. if you need stable sorting,
-use Joined (J) to get a Vec and sort it in the system body.
-- docs
-- more/better tests
+- Make sure this doesn't do something terribly wrong (should be fine though at this point).
+- Bevy's iteration order is nondeterministic. If you need stable sorting, use `Joined` (`J`) to get a `Vec` and sort it in the system body.
+- Docs.
+- More/better tests.
 
 ## License
 
 The code is dual-licensed:
 
-* MIT License ([LICENSE-MIT](LICENSE-MIT) or [http://opensource.org/licenses/MIT](http://opensource.org/licenses/MIT))
-* Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0))
-
-
+- MIT License ([LICENSE-MIT](LICENSE-MIT) or [http://opensource.org/licenses/MIT](http://opensource.org/licenses/MIT))
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0))

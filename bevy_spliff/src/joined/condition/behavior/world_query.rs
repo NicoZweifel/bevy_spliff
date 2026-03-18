@@ -4,7 +4,7 @@ use bevy_ecs::{
     change_detection::Tick,
     component::{Component, ComponentId, Components},
     prelude::World,
-    query::{FilteredAccess, QueryFilter, WorldQuery},
+    query::{FilteredAccess, NestedQuery, NestedQueryFetch, QueryFilter, QueryState, WorldQuery},
     storage::Table,
     world::unsafe_world_cell::UnsafeWorldCell,
 };
@@ -12,23 +12,22 @@ use bevy_ecs::{
 unsafe impl<Ref, Filter> WorldQuery for JoinCondition<Ref, Filter>
 where
     Ref: Joinable + Component,
-    Filter: QueryFilter,
-    <Filter as WorldQuery>::State: Clone,
+    Filter: QueryFilter + 'static,
 {
-    type Fetch<'w> = JoinedFetch<'w, Ref, Filter>;
-    type State = JoinedState<Ref, Filter>;
+    type Fetch<'w> = NestedQueryFetch<'w>;
+    type State = (ComponentId, QueryState<(), Filter>);
 
     fn shrink_fetch<'wlong: 'wshort, 'wshort>(fetch: Self::Fetch<'wlong>) -> Self::Fetch<'wshort> {
-        fetch
+        NestedQuery::<(), Filter>::shrink_fetch(fetch)
     }
 
     unsafe fn init_fetch<'w>(
         world: UnsafeWorldCell<'w>,
-        state: &'_ Self::State,
-        _last_run: Tick,
-        _this_run: Tick,
+        (_, state): &'_ Self::State,
+        last_run: Tick,
+        this_run: Tick,
     ) -> Self::Fetch<'w> {
-        JoinedFetch::new(world, state.target_state.clone())
+        unsafe { NestedQuery::<(), Filter>::init_fetch(world, state, last_run, this_run) }
     }
 
     const IS_DENSE: bool = false;
@@ -43,25 +42,35 @@ where
 
     unsafe fn set_table<'w>(_: &mut Self::Fetch<'w>, _: &'_ Self::State, _: &'w Table) {}
 
-    fn update_component_access(state: &Self::State, access: &mut FilteredAccess) {
-        state.update_access(access);
+    fn update_component_access((id, state): &Self::State, access: &mut FilteredAccess) {
+        access.add_read(*id);
+        NestedQuery::<(), Filter>::update_component_access(state, access);
+    }
+
+    fn init_nested_access(
+        (_, state): &Self::State,
+        system_name: Option<&str>,
+        component_access_set: &mut bevy_ecs::query::FilteredAccessSet,
+        world: UnsafeWorldCell,
+    ) {
+        state.init_access(system_name, component_access_set, world);
     }
 
     fn init_state(world: &mut World) -> Self::State {
-        JoinedState::new(world.register_component::<Ref>(), Filter::init_state(world))
+        (
+            world.register_component::<Ref>(),
+            NestedQuery::<(), Filter>::init_state(world),
+        )
     }
 
-    fn get_state(components: &Components) -> Option<Self::State> {
-        Some(JoinedState::new(
-            components.get_id(std::any::TypeId::of::<Ref>())?,
-            Filter::get_state(components)?,
-        ))
+    fn get_state(_: &Components) -> Option<Self::State> {
+        None
     }
 
     fn matches_component_set(
-        state: &Self::State,
+        (id, _): &Self::State,
         set_contains_id: &impl Fn(ComponentId) -> bool,
     ) -> bool {
-        set_contains_id(state.ref_id)
+        set_contains_id(*id)
     }
 }

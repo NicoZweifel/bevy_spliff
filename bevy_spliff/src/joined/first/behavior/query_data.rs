@@ -1,16 +1,44 @@
 use crate::prelude::*;
 use bevy_ecs::{
     prelude::*,
-    query::{EcsAccessType, QueryData, ReadOnlyQueryData, WorldQuery},
+    query::{
+        ArchetypeQueryData, EcsAccessLevel, EcsAccessType, IterQueryData, NestedQuery, QueryData,
+        QueryFilter, ReadOnlyQueryData,
+    },
     storage::TableRow,
 };
-use std::ops::ControlFlow;
+use std::iter;
 
-unsafe impl<Ref, Data> QueryData for JoinedFirst<Ref, Data>
+unsafe impl<Ref, Data, Filter> IterQueryData for JoinedFirst<Ref, Data, Filter>
 where
     Ref: Joinable + Component,
-    Data: ReadOnlyQueryData,
-    <Data as WorldQuery>::State: Clone,
+    Data: ReadOnlyQueryData + 'static,
+    Filter: QueryFilter + 'static,
+{
+}
+
+// SAFETY: JoinedFirst is read-only because Data is restricted to ReadOnlyQueryData
+unsafe impl<Ref, Data, Filter> ReadOnlyQueryData for JoinedFirst<Ref, Data, Filter>
+where
+    Ref: Joinable + Component,
+    Data: ReadOnlyQueryData + 'static,
+    Filter: QueryFilter + 'static,
+{
+}
+
+impl<Ref, Data, Filter> ArchetypeQueryData for JoinedFirst<Ref, Data, Filter>
+where
+    Ref: Joinable + Component,
+    Data: ReadOnlyQueryData + 'static,
+    Filter: QueryFilter + 'static,
+{
+}
+
+unsafe impl<Ref, Data, Filter> QueryData for JoinedFirst<Ref, Data, Filter>
+where
+    Ref: Joinable + Component,
+    Data: ReadOnlyQueryData + 'static,
+    Filter: QueryFilter + 'static,
 {
     const IS_READ_ONLY: bool = true;
     const IS_ARCHETYPAL: bool = false;
@@ -24,70 +52,36 @@ where
         Data::shrink::<'wlong, 'wshort, 's>(item)
     }
 
+    #[inline(always)]
     unsafe fn fetch<'w, 's>(
-        state: &'s Self::State,
+        (_, state): &'s Self::State,
         fetch: &mut Self::Fetch<'w>,
         entity: Entity,
         _table_row: TableRow,
     ) -> Option<Self::Item<'w, 's>> {
-        unsafe {
-            let mut data_fetch = Data::init_fetch(
-                fetch.world,
-                &state.target_state,
-                fetch.world.last_change_tick(),
-                fetch.world.change_tick(),
-            );
+        let r = unsafe { fetch.world.get_entity(entity).ok()?.get::<Ref>()? };
+        let Self::Fetch {
+            world,
+            last_run,
+            this_run,
+            ..
+        } = fetch;
 
-            fetch
-                .iter_joined(entity)?
-                .try_fold(
-                    ControlFlow::Continue(()),
-                    |mut flow, (target, target_cell)| {
-                        let location = target_cell.location();
-                        let (Some(archetype), Some(table)) = (
-                            fetch.world.archetypes().get(location.archetype_id),
-                            fetch.world.storages().tables.get(location.table_id),
-                        ) else {
-                            return Some(flow);
-                        };
-
-                        if Data::matches_component_set(&state.target_state, &|id| {
-                            archetype.contains(id)
-                        }) {
-                            Data::set_archetype(
-                                &mut data_fetch,
-                                &state.target_state,
-                                archetype,
-                                table,
-                            );
-
-                            if let Some(item) = Data::fetch(
-                                &state.target_state,
-                                &mut data_fetch,
-                                target,
-                                location.table_row,
-                            ) {
-                                flow = ControlFlow::Break(item);
-                            }
-                        }
-
-                        Some(flow)
-                    },
-                )?
-                .break_value()
-        }
+        r.targets().find_map(move |target| unsafe {
+            state
+                .query_unchecked_manual_with_ticks(*world, *last_run, *this_run)
+                .get_inner(target)
+                .ok()
+        })
     }
 
     #[inline(always)]
-    fn iter_access(state: &Self::State) -> impl Iterator<Item = EcsAccessType<'_>> {
-        state.iter_access()
+    fn iter_access((id, state): &Self::State) -> impl Iterator<Item = EcsAccessType<'_>> {
+        iter::once(EcsAccessType::Component(EcsAccessLevel::Read(*id))).chain(NestedQuery::<
+            Data,
+            Filter,
+        >::iter_access(
+            state
+        ))
     }
-}
-
-unsafe impl<Ref, Data> ReadOnlyQueryData for JoinedFirst<Ref, Data>
-where
-    Ref: Joinable + Component,
-    Data: ReadOnlyQueryData,
-    <Data as WorldQuery>::State: Clone,
-{
 }

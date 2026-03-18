@@ -1,0 +1,14 @@
+pub const PLAYER_NAME: &str = "Player";
+pub const ENEMY_NAME: &str = "Enemy";
+pub const ITEM_NAME: &str = "Item";
+pub const VAULT_NAME: &str = "Vault";
+pub const WEAPON_NAME: &str = "Sword";
+pub const LEGENDARY_NAME: &str = "Legendary";
+pub const VALID_NAME: &str = "Valid";
+pub const GHOST_NAME: &str = "Ghost";
+pub const PARENT_NAME: &str = "Parent";
+pub const CHILD_1_NAME: &str = "Child 1";
+pub const CHILD_2_NAME: &str = "Child 2";
+pub const EMPTY_NAME: &str = "Empty";
+pub const UNARMED_NAME: &str = "Unarmed";
+pub const CONTAINER_NAME: &str = "Container";
