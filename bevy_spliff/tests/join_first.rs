@@ -63,7 +63,7 @@ fn join_first_empty_should_filter_out_root() {
 }
 
 #[test]
-fn join_first_should_skip_invalid_targets_and_yield_first_valid() {
+fn join_first_should_skip_invalid_and_yield() {
     // Arrange
     let mut world = World::new();
     world.spawn((
@@ -89,7 +89,7 @@ fn join_first_should_skip_invalid_targets_and_yield_first_valid() {
 }
 
 #[test]
-fn join_first_deeply_nested_filtered_should_yield_single_match() {
+fn join_first_should_yield_deeply_nested_filtered() {
     // Arrange
     let mut world = World::new();
     world.spawn((
@@ -126,7 +126,7 @@ fn join_first_deeply_nested_filtered_should_yield_single_match() {
 }
 
 #[test]
-fn join_first_deeply_nested_filtered_should_yield_all() {
+fn join_first_should_yield_all_deeply_nested_filtered() {
     // Arrange
     let mut world = World::new();
     world.spawn((
