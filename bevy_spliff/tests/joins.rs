@@ -478,4 +478,3 @@ fn join_condition_with_no_matches_should_filter_out_root() {
     // Assert
     assert!(res.is_empty());
 }
-
