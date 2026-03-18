@@ -173,7 +173,7 @@ fn join_empty_should_skip_and_yield_valid() {
 }
 
 #[test]
-fn joined_with_despawned_target_should_skip() {
+fn join_with_despawned_target_should_skip() {
     // Arrange
     let mut world = World::new();
     let e = world.spawn(Name::new(GHOST_NAME)).id();
