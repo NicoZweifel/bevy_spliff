@@ -211,7 +211,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_spliff"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "bevy_ecs",
  "bevy_spliff_derive",
@@ -220,7 +220,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_spliff_derive"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "proc-macro2",
  "quote",

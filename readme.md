@@ -330,6 +330,7 @@ These are enabled by default.
 
 ## Notes / TODOs
 
+- Dev branch is currently using a bevy fork because of private fields on `NestedQuery`.
 - **Mutable access on `Join`:** Currently, `Join` only supports `ReadOnlyQueryData`. True mutable joins require careful handling to prevent mutable aliasing (i.e., multiple root entities yielding `&mut` access to the same target entity).
 - **Cleanup `WorldQuery`/`QueryData` Boilerplate:** Refactor the internal implementations for `J`, `JF`, and `JC` using generic `JoinQuery` implementations or macros to reduce duplicated code.
 - Depends on `bevy_ecs` only (and `syn` etc. if you use the macro).
