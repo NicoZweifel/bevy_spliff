@@ -63,8 +63,11 @@ where
         )
     }
 
-    fn get_state(_: &Components) -> Option<Self::State> {
-        None
+    fn get_state(components: &Components) -> Option<Self::State> {
+        Some((
+            components.get_id(std::any::TypeId::of::<Ref>())?,
+            NestedQuery::<(), Filter>::get_state(components)?,
+        ))
     }
 
     fn matches_component_set(
